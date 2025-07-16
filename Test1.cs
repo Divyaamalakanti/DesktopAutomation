@@ -2,6 +2,8 @@
 using FlaUI.Core.AutomationElements;
 using FlaUI.Core.Definitions;
 using FlaUI.Core.Conditions;
+using FlaUI.Core.Identifiers;
+using FlaUI.Core.Tools;
 using FlaUI.UIA3;
 using System;
 using System.Threading; // For Thread.Sleep
@@ -13,7 +15,8 @@ using System.IO; // Required for file operations
 using FlaUI.Core.WindowsAPI;//For clipboard operations
 using FlaUI.Core.Input; // For keyboard and mouse input
 using FlaUI.Core.AutomationElements.Infrastructure;
-// using FlaUI.Core.AutomationProperties;
+using System.Diagnostics.CodeAnalysis;
+//  using FlaUI.Core.
 
 // For AutomationElement extensions
 namespace MyDesktopAutomationTests;
@@ -861,8 +864,8 @@ public sealed class Test2
 
 
     }
-    //  [Test]
-     
+    // //  [Test]
+
     // public void AutomateRichTextBoxOnTabPage3()
     // {
     //     // 1. Find and select TabPage3
@@ -900,9 +903,10 @@ public sealed class Test2
 
     //     // 5. Check for the presence of scrollbars by searching from the original AutomationElement
     //     // THIS IS THE CRITICAL CHANGE FOR FLAUI 5.x: Use PropertyCondition with AutomationProperties.OrientationProperty
-    //     var hScrollBar = richTextBoxAutomationElement.FindFirstDescendant(cf =>
-    //         cf.ByControlType(ControlType.ScrollBar).And(
-    //             new PropertyCondition(AutomationProperties.OrientationProperty, OrientationType.Horizontal)));
+    //     // var hScrollBar = richTextBoxAutomationElement.FindFirstDescendant(cf =>
+    //     //     cf.ByControlType(ControlType.ScrollBar).And(
+    //     //         new PropertyCondition(AutomationProperties.OrientationProperty, OrientationType.Horizontal)));
+    //     var hScrollBar = richTextBoxAutomationElement.FindFirstDescendant(cf => cf.ByControlType(ControlType.ScrollBar).And(new PropertyCondition(PropertyId., OrientationType.Horizontal)));
 
     //     Assert.That(hScrollBar, Is.Not.Null, "Horizontal scrollbar should be present.");
     //     Assert.That(hScrollBar.Properties.IsEnabled.Value, Is.True, "Horizontal scrollbar should be enabled.");
@@ -915,49 +919,366 @@ public sealed class Test2
     //     // Assert.That(vScrollBar.Properties.IsEnabled.Value, Is.True, "Vertical scrollbar should be enabled.");
     //     Console.WriteLine("Vertical scrollbar found and enabled.");
     // }
-    // [Test]
-    // public void AutomateRichTextBoxOnTabPage3A()
-    // {
-    //     // 1. Find and select TabPage3
-    //     var TabPage3 = mainWindow.FindFirstDescendant(cf => cf.ByAutomationId("tabPage3")).AsTabItem();
-    //     Assert.That(TabPage3, Is.Not.Null, "TabPage3 should be found.");
+    [Test]
+    public void AutomateRichTextBoxOnTabPage3A()
+    {
+        // 1. Find and select TabPage3
+        var TabPage3 = mainWindow.FindFirstDescendant(cf => cf.ByAutomationId("tabPage3")).AsTabItem();
+        Assert.That(TabPage3, Is.Not.Null, "TabPage3 should be found.");
+        // Select the tab page
+        TabPage3.Select();
+        Thread.Sleep(500); // Give UI time to switch tabs
+        Console.WriteLine("Switched to TabPage3.");
 
-    //     // 2. Find the RichTextBox as an AutomationElement first, then cast to TextBox for text interaction
-    //     // This is the key change: Keep the initial find as a generic AutomationElement.
-    //     var richTextBoxAutomationElement = TabPage3.FindFirstDescendant(cf => cf.ByAutomationId("richTextBox1"));
-    //     Assert.That(richTextBoxAutomationElement, Is.Not.Null, "RichTextBox AutomationElement should be found.");
-    //     // var editBox = richTextBox.As(ControlType.Edit);
-    //     // Now, cast it to TextBox for text manipulation
-    //     var richTextBox = richTextBoxAutomationElement.AsTextBox();
-    //     Assert.That(richTextBox, Is.Not.Null, "RichTextBox (as TextBox) should be castable.");
-    //     Console.WriteLine("RichTextBox found and cast to TextBox.");
+        // 2. Find the RichTextBox as an AutomationElement first, then cast to TextBox for text interaction
+        // This is the key change: Keep the initial find as a generic AutomationElement.
+        var richTextBoxAutomationElement = mainWindow.FindFirstDescendant(cf => cf.ByAutomationId("richTextBox1"));
+        Assert.That(richTextBoxAutomationElement, Is.Not.Null, "RichTextBox AutomationElement should be found.");
+        // var editBox = richTextBox.As(ControlType.Edit);
+        // Now, cast it to TextBox for text manipulation
+        var richTextBox = richTextBoxAutomationElement.AsTextBox();
+        Assert.That(richTextBox, Is.Not.Null, "RichTextBox (as TextBox) should be castable.");
+        Console.WriteLine("RichTextBox found and cast to TextBox.");
 
-    //     // 3. Enter some long text to trigger horizontal scrollbar
-    //     string longText = "This is a very long line of text that should definitely trigger the horizontal scrollbar because it extends beyond the visible width of the RichTextBox. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.";
+        // 3. Enter some long text to trigger horizontal scrollbar
+        string longText = "This is a very long line of text that should definitely trigger the This is a very long line of text that should definitely trigger the This is a very long line of text that should definitely trigger the This is a very long line of text that should definitely trigger the This is a very long line of text that should definitely trigger the This is a very.\n" +
+         "long line of text that should definitely trigger the This is a very long line of text that should definitely trigger the This is a very long line of text that should definitely trigger the This is a very long line of text that should definitely trigger the This is a very long line of text.\n" +
 
-    //     richTextBox.Text = string.Empty;
-    //     richTextBox.Enter(longText);
-    //     Thread.Sleep(1000); // Give time for text entry and scrollbar to appear
-    //     Console.WriteLine($"Entered text into RichTextBox. Text length: {longText.Length}");
+                           "that should definitely trigger the This is a very long line of text that should definitely trigger the horizontal scrollbar because it extends beyond the visible width of the RichTextBox. Lorem ipsum dolor sit amet, consectetur.\n" + "adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.\n" + "This is a very long line of text that should definitely trigger the This is a very long line of text that should definitely trigger the This is a very long line of text that should definitely trigger the This is a very long line of text that should definitely trigger the This is a very long line of text that should definitely trigger the This is a very.\n" +
+         "long line of text that should definitely trigger the This is a very long line of text that should definitely trigger the This is a very long line of text that should definitely trigger the This is a very long line of text that should definitely trigger the This is a very long line of text.\n" +
 
-    //     // 4. Verify the text was entered correctly
-    //     Assert.That(richTextBox.Text, Is.EqualTo(longText), "Text in RichTextBox should match the entered text.");
-    //     Console.WriteLine("Text verification successful.");
+                           "that should definitely trigger the This is a very long line of text that should definitely trigger."; ;
+        // string horizontalLinePart = "This is a very long line of text that should definitely trigger the horizontal scrollbar because it extends beyond the visible width of the RichTextBox.";  
 
-    //     // 5. Check for the presence of scrollbars by searching from the original AutomationElement
-    //     // The scrollbars are direct children of the RichTextBox's underlying UIA element,
-    //     // not necessarily the 'TextBox' wrapper that FlaUI provides for text interaction.
-    //     var hScrollBar = richTextBoxAutomationElement.FindFirstDescendant(cf => cf.ByControlType(ControlType.ScrollBar).And(cf.ByOrientation(OrientationType.Horizontal)));
-    //     Assert.That(hScrollBar, Is.Not.Null, "Horizontal scrollbar should be present.");
-    //     Assert.That(hScrollBar.Properties.IsEnabled.Value, Is.True, "Horizontal scrollbar should be enabled.");
-    //     Console.WriteLine("Horizontal scrollbar found and enabled.");
+        // Duplicate the horizontal part multiple times to ensure horizontal scrollbar
+        // longText = string.Concat(Enumerable.Repeat(horizontalLinePart, 10)); // Repeat to ensure long text
 
-    //     var vScrollBar = richTextBoxAutomationElement.FindFirstDescendant(cf => cf.ByControlType(ControlType.ScrollBar).And(cf.ByOrientation(OrientationType.Vertical)));
-    //     Assert.That(vScrollBar, Is.Not.Null, "Vertical scrollbar should be present.");
-    //     Assert.That(vScrollBar.Properties.IsEnabled.Value, Is.True, "Vertical scrollbar should be enabled.");
-    //     Console.WriteLine("Vertical scrollbar found and enabled.");
-    // }
+        richTextBox.Text = string.Empty;
+        richTextBox.Enter(longText);
+        Thread.Sleep(20000); // Give time for text entry and scrollbar to appear
+        Console.WriteLine($"Entered text into RichTextBox. Text length: {longText.Length}");
 
+        // 4. Verify the text was entered correctly
+        // Assert.That(richTextBox.Text, Is.EqualTo(longText), "Text in RichTextBox should match the entered text.");
+        Console.WriteLine("Text verification successful.");
+
+        // 5. Check for the presence of scrollbars by searching from the original AutomationElement
+        // The scrollbars are direct children of the RichTextBox's underlying UIA element,
+        // not necessarily the 'TextBox' wrapper that FlaUI provides for text interaction.
+        var hScrollBar = richTextBoxAutomationElement.FindFirstDescendant(cf => cf.ByControlType(ControlType.ScrollBar).And(cf.ByAutomationId("NonClientHorizontalScrollBar")));
+        Assert.That(hScrollBar, Is.Not.Null, "Horizontal scrollbar should be present.");
+        Assert.That(hScrollBar.Properties.IsEnabled.Value, Is.True, "Horizontal scrollbar should be enabled.");
+        Console.WriteLine("Horizontal scrollbar found and enabled.");
+
+        var vScrollBar = richTextBoxAutomationElement.FindFirstDescendant(cf => cf.ByControlType(ControlType.ScrollBar).And(cf.ByAutomationId("NonClientVerticalScrollBar")));
+        Assert.That(vScrollBar, Is.Not.Null, "Vertical scrollbar should be present.");
+        Assert.That(vScrollBar.Properties.IsEnabled.Value, Is.True, "Vertical scrollbar should be enabled.");
+        Console.WriteLine("Vertical scrollbar found and enabled.");
+        //TODO: Scrollbar opertion 
+    }
+   
+    [Test]
+    public void DataGridTest1()
+    {
+        var tabPage3 = mainWindow.FindFirstDescendant(cf => cf.ByAutomationId("tabPage3")).AsTabItem();
+        Assert.That(tabPage3, Is.Not.Null, "TabPage3 should be found.");
+        // Select the tab page
+        tabPage3.Select();
+        Thread.Sleep(500); // Give UI time to switch tabs
+        Console.WriteLine("Switched to TabPage3.");
+        // 1. Find the TabControl and select TabPage3
+
+        // 2. Find the DataGrid AutomationElement
+        // We get the AutomationElement directly, no AsDataGrid() here.
+        var dataGridElement = mainWindow.FindFirstDescendant(cf => cf.ByAutomationId("dataGridView1").And(cf.ByControlType(ControlType.DataGrid)));
+        Assert.That(dataGridElement, Is.Not.Null, "DataGrid AutomationElement should be present.");
+        Console.WriteLine($"DataGrid AutomationElement found: {dataGridElement.Name} (AutomationId: {dataGridElement.AutomationId})");
+        Thread.Sleep(2000); // Give UI time to render DataGrid contents
+
+        // 3. Get the GridPattern
+        var gridPattern = dataGridElement.Patterns.Grid.Pattern;
+        Assert.That(gridPattern, Is.Not.Null, "DataGrid does not support GridPattern.");
+
+        int rowCount = gridPattern.RowCount;
+        int colCount = gridPattern.ColumnCount;
+
+        Console.WriteLine($"DataGrid reports {rowCount} rows and {colCount} columns via GridPattern.");
+
+        // Your data generation: for (int i = 1; i <= 10; i++) { dataGridView1.Rows.Add(i, $"Name {i}", 20 + i, 200 * i, i); }
+        // For the second data row (i=2): ID=2, Name="Name 2", Age=22, Salary=400, Experience=2
+        List<string> expectedList = ["2", "Name 2", "22", "400", "2"];
+        List<string> actualList = [];
+
+       // List<string> actualList = new();
+
+        /*
+        List<string> expectedList = new List<string> { "2", "Name 2", "22", "400", "2" };
+        List<string> actualList = new List<string>();
+       */
+
+        Console.WriteLine("Reading cells from the second row (index 1):");
+
+        int targetRowIndex = 1; // This is the 2nd *data* row (0-indexed, after the header row if present)
+
+        Assert.That(targetRowIndex, Is.LessThan(rowCount), $"Target row index {targetRowIndex} is out of bounds. Max row index is {rowCount - 1}.");
+
+        for (int col = 0; col < colCount; col++)
+        {
+            var cellElement = gridPattern.GetItem(targetRowIndex, col);
+            Assert.That(cellElement, Is.Not.Null, $"Cell at row {targetRowIndex}, column {col} not found.");
+
+            string cellValue = "";
+
+            if (cellElement.Patterns.Value.IsSupported)
+            {
+                cellValue = cellElement.Patterns.Value.Pattern.Value;
+                Console.WriteLine($"  Cell ({targetRowIndex},{col}) value (ValuePattern): '{cellValue}'");
+            }
+            else
+            {
+
+                Console.WriteLine($"  Warning: Cell ({targetRowIndex},{col}) does not support ValuePattern. Falling back to Name/Text.");
+                if (cellElement.Patterns.Text.IsSupported)
+                {
+                    cellValue = cellElement.Patterns.Text.Pattern.DocumentRange.GetText(int.MaxValue);
+                    Console.WriteLine($"  Cell ({targetRowIndex},{col}) value (TextPattern): '{cellValue}'");
+                }
+                else
+                {
+                    Console.WriteLine($"  Warning: Cell ({targetRowIndex},{col}) does not support TextPattern either. Using Name property as fallback.");
+                }
+
+                Console.WriteLine($"  Cell ({targetRowIndex},{col}) value (Fallback): '{cellValue}'");
+            }
+
+            Assert.That(!string.IsNullOrEmpty(cellValue), $"Cell ({targetRowIndex},{col}) has no readable value.");
+            actualList.Add(cellValue);
+        }
+
+        Console.WriteLine($"Actual list: [{string.Join(", ", actualList)}]");
+
+        // Assert that the actual array matches the expected array
+        Assert.That(actualList, Is.EqualTo(expectedList),
+            $"Data mismatch in 2nd row.\nExpected: [{string.Join(", ", expectedList)}]\nActual: [{string.Join(", ", actualList)}]");
+
+        Console.WriteLine("Second row data verified successfully.");
+    }
+[Test]
+    public void ReadThirdColumnData()
+    {
+        var TabPage3 = mainWindow.FindFirstDescendant(cf => cf.ByAutomationId("tabPage3")).AsTabItem();
+        Assert.That(TabPage3, Is.Not.Null, "TabPage3 should be found.");
+        // Select the tab page
+        TabPage3.Select();
+        Thread.Sleep(500); // Give UI time to switch tabs
+        Console.WriteLine("Switched to TabPage3.");
+
+        // Find the DataGrid AutomationElement
+        var dataGridElement = mainWindow.FindFirstDescendant(cf => cf.ByAutomationId("dataGridView1").And(cf.ByControlType(ControlType.DataGrid)));
+        Assert.That(dataGridElement, Is.Not.Null, "DataGrid AutomationElement should be present.");
+        Console.WriteLine($"DataGrid AutomationElement found: {dataGridElement.Name} (AutomationId: {dataGridElement.AutomationId})");
+        Thread.Sleep(2000);
+        var gridPattern = dataGridElement.Patterns.Grid.Pattern;
+        Assert.That(gridPattern, Is.Not.Null, "DataGrid does not support GridPattern.");
+
+        int rowCount = gridPattern.RowCount;
+        int colCount = gridPattern.ColumnCount;
+
+        Console.WriteLine($"DataGrid reports {rowCount} rows and {colCount} columns via GridPattern.");
+
+        // Define the target column index (0-indexed, so 3rd column is index 2)
+        int targetColumnIndex = 2; // This is the 3rd column
+
+        Assert.That(targetColumnIndex, Is.LessThan(colCount), $"Target column index {targetColumnIndex} is out of bounds. Max column index is {colCount - 1}.");
+         string[] expectedThirdColumnArray = {"21","22", "23", "24", "25", "26", "27", "28", "29", "30", "(null)" };
+        Console.WriteLine($"Expected values in the 3rd column: [{string.Join(", ", expectedThirdColumnArray)}]");
+        List<string> thirdColumnValues = new List<string>();
+
+        Console.WriteLine($"Reading cells from the third column (index {targetColumnIndex}):");
+
+        // Iterate through each row to get the cell from the target column
+        for (int row = 0; row < rowCount; row++)
+        {
+            var cellElement = gridPattern.GetItem(row, targetColumnIndex);
+            Assert.That(cellElement, Is.Not.Null, $"Cell at row {row}, column {targetColumnIndex} not found.");
+
+            string cellValue = "";
+
+            // Get the value from the cell's ValuePattern
+            if (cellElement.Patterns.Value.IsSupported)
+            {
+                cellValue = cellElement.Patterns.Value.Pattern.Value;
+                Console.WriteLine($"  Cell ({row},{targetColumnIndex}) value (ValuePattern): '{cellValue}'");
+            }
+            else
+            {
+                // Fallback if ValuePattern is not supported
+                Console.WriteLine($"  Warning: Cell ({row},{targetColumnIndex}) does not support ValuePattern. Falling back to Name/Text.");
+                if (cellElement.Patterns.Text.IsSupported)
+                {
+                    cellValue = cellElement.Patterns.Text.Pattern.DocumentRange.GetText(int.MaxValue);
+                }
+                else
+                {
+                    cellValue = cellElement.Name; // Last resort
+                }
+                Console.WriteLine($"  Cell ({row},{targetColumnIndex}) value (Fallback): '{cellValue}'");
+            }
+
+            Assert.That(!string.IsNullOrEmpty(cellValue), $"Cell ({row},{targetColumnIndex}) has no readable value.");
+            thirdColumnValues.Add(cellValue);
+        }
+
+        string[] actualThirdColumnArray = thirdColumnValues.ToArray();
+        Console.WriteLine($"Actual Third Column Values: [{string.Join(", ", actualThirdColumnArray)}]");
+       Assert.That(actualThirdColumnArray, Is.EqualTo(expectedThirdColumnArray),
+            $"Data mismatch in 3rd column.\nExpected: [{string.Join(", ", expectedThirdColumnArray)}]\nActual: [{string.Join(", ", actualThirdColumnArray)}]");
+        
+        Console.WriteLine("Third column data read successfully.");
+    }
+    [Test]
+    public void Readcell3X4()
+    {
+        var TabPage3 = mainWindow.FindFirstDescendant(cf => cf.ByAutomationId("tabPage3")).AsTabItem();
+        Assert.That(TabPage3, Is.Not.Null, "TabPage3 should be found.");
+        // Select the tab page
+        TabPage3.Select();
+        Thread.Sleep(500); // Give UI time to switch tabs
+        Console.WriteLine("Switched to TabPage3.");
+
+        // Find the DataGrid AutomationElement
+        var dataGridElement = mainWindow.FindFirstDescendant(cf => cf.ByAutomationId("dataGridView1").And(cf.ByControlType(ControlType.DataGrid)));
+        Assert.That(dataGridElement, Is.Not.Null, "DataGrid AutomationElement should be present.");
+        Console.WriteLine($"DataGrid AutomationElement found: {dataGridElement.Name} (AutomationId: {dataGridElement.AutomationId})");
+        Thread.Sleep(2000);
+        var gridPattern = dataGridElement.Patterns.Grid.Pattern;
+        Assert.That(gridPattern, Is.Not.Null, "DataGrid does not support GridPattern.");
+
+        int rowCount = gridPattern.RowCount;
+        int colCount = gridPattern.ColumnCount;
+
+        Console.WriteLine($"DataGrid reports {rowCount} rows and {colCount} columns via GridPattern.");
+
+        // Define the target column index (0-indexed, so 3rd column is index 2)
+        int targetRowIndex = 3; // This is the 3rd row (0-indexed)
+        int targetColumnIndex = 4;
+        string expectedCellValue = "4"; // Expected value for cell at (3, 4)
+        var cellElement = gridPattern.GetItem(targetRowIndex, targetColumnIndex);
+        Assert.That(cellElement, Is.Not.Null, $"Cell at row {targetRowIndex}, column {targetColumnIndex} not found.");
+        string cellValue = "";
+        // Get the value from the cell's ValuePattern
+        if (cellElement.Patterns.Value.IsSupported)
+        {
+            cellValue = cellElement.Patterns.Value.Pattern.Value;
+            Console.WriteLine($"  Cell ({targetRowIndex},{targetColumnIndex}) value (ValuePattern): '{cellValue}'");
+        }
+        else
+        {
+            // Fallback if ValuePattern is not supported
+            Console.WriteLine($"  Warning: Cell ({targetRowIndex},{targetColumnIndex}) does not support ValuePattern. Falling back to Name/Text.");
+            if (cellElement.Patterns.Text.IsSupported)
+            {
+                cellValue = cellElement.Patterns.Text.Pattern.DocumentRange.GetText(int.MaxValue);
+            }
+            else
+            {
+                cellValue = cellElement.Name; // Last resort
+            }
+            Console.WriteLine($"  Cell ({targetRowIndex},{targetColumnIndex}) value (Fallback): '{cellValue}'");
+        }
+
+        Assert.That(!string.IsNullOrEmpty(cellValue), $"Cell ({targetRowIndex},{targetColumnIndex}) has no readable value.");
+        Console.WriteLine($"Cell value at row {targetRowIndex}, column {targetColumnIndex}: {cellValue}");
+        Assert.That(cellValue, Is.EqualTo(expectedCellValue), $"Expected cell value '{expectedCellValue}' does not match actual value '{cellValue}' at row {targetRowIndex}, column {targetColumnIndex}.");
+        Console.WriteLine("Cell value verified successfully.");
+        // TODO: delete, new row insertion 
+
+
+       
+    }
+    [Test]
+    public void SetData()
+    {
+
+        var TabPage3 = mainWindow.FindFirstDescendant(cf => cf.ByAutomationId("tabPage3")).AsTabItem();
+        Assert.That(TabPage3, Is.Not.Null, "TabPage3 should be found.");
+        // Select the tab page
+        TabPage3.Select();
+        Thread.Sleep(500); // Give UI time to switch tabs
+        Console.WriteLine("Switched to TabPage3.");
+        // 1. Find the TabControl and select TabPage3
+
+        // 2. Find the DataGrid AutomationElement
+        // We get the AutomationElement directly, no AsDataGrid() here.
+        var dataGridElement = mainWindow.FindFirstDescendant(cf => cf.ByAutomationId("dataGridView1").And(cf.ByControlType(ControlType.DataGrid)));
+        Assert.That(dataGridElement, Is.Not.Null, "DataGrid AutomationElement should be present.");
+        Console.WriteLine($"DataGrid AutomationElement found: {dataGridElement.Name} (AutomationId: {dataGridElement.AutomationId})");
+        Thread.Sleep(2000); // Give UI time to render DataGrid contents
+
+        // 3. Get the GridPattern
+        var gridPattern = dataGridElement.Patterns.Grid.Pattern;
+        Assert.That(gridPattern, Is.Not.Null, "DataGrid does not support GridPattern.");
+
+        int rowCount = gridPattern.RowCount;
+        int colCount = gridPattern.ColumnCount;
+        var targetRowIndex = 2; // This is the 11th row (0-indexed, after the header row if present)
+
+        Assert.That(targetRowIndex, Is.LessThan(rowCount), $"Target row index {targetRowIndex} is out of bounds. Max row index is {rowCount - 1}.");
+
+        Console.WriteLine($"DataGrid reports {rowCount} rows and {colCount} columns via GridPattern.");
+        for (int col = 0; col < colCount; col++)
+        {
+            var cell = gridPattern.GetItem(targetRowIndex, col);
+            Assert.That(cell, Is.Not.Null, $"Cell at row {targetRowIndex}, column {col} not found.");
+            switch (col)
+            {
+                case 0:
+                    cell.Patterns.Value.Pattern.SetValue("11");
+                    Console.WriteLine($"Set value '11' in cell ({targetRowIndex},{col})");
+                    break;
+                case 1:
+                    cell.Patterns.Value.Pattern.SetValue("Name 11");
+                    Console.WriteLine($"Set value 'Name 11' in cell ({targetRowIndex},{col})");
+                    break;
+                case 2:
+                    cell.Patterns.Value.Pattern.SetValue("31");
+                    Console.WriteLine($"Set value '31' in cell ({targetRowIndex},{col})");
+                    break;
+                case 3:
+                    cell.Patterns.Value.Pattern.SetValue("500");
+                    Console.WriteLine($"Set value '500' in cell ({targetRowIndex},{col})");
+                    break;
+                case 4:
+                    cell.Patterns.Value.Pattern.SetValue("11");
+                    Console.WriteLine($"Set value '11' in cell ({targetRowIndex},{col})");
+                    break;
+            }
+        }
+        // Verify the set data
+        string[] expectedArray = [ "11", "Name 11", "31", "500", "11" ];
+        string[] actualArray = [];
+        string actualElement = "";
+
+        for (int col = 0; col < colCount; col++)
+        {
+            var cell = gridPattern.GetItem(targetRowIndex, col);
+            Assert.That(cell, Is.Not.Null, $"Cell at row {targetRowIndex}, column {col} not found.");
+            Console.WriteLine($"Cell value at row {targetRowIndex}, column {col}: {cell.Patterns.Value.Pattern.Value}");
+            actualElement = cell.Patterns.Value.Pattern.Value;
+
+        }
+        actualArray = [.. actualArray, actualElement];
+                // actualArray = actualArray.Append(actualElement).ToArray();
+
+        Console.WriteLine($"Actual array: [{string.Join(", ", actualArray)}]");
+        Assert.That(actualArray, Is.EqualTo(expectedArray),
+            $"Data mismatch in row {targetRowIndex}.\nExpected: [{string.Join(", ", expectedArray)}]\nActual: [{string.Join(", ", actualArray)}]");
+        Console.WriteLine($"Data set in row {targetRowIndex} successfully.");
+       
+         
+     }
+
+   
     [TearDown]
     public void Teardown()
     {

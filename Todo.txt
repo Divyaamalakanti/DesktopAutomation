@@ -7,3 +7,8 @@
   5.2 Read data 3rd entire columns
   5.3 Read data @cell 3X4
   5.4 Insert new row
+  context menu(delete a row)
+  search option in datagrid(operation)
+  datagrid dragdrop()
+  column resizing 
+  

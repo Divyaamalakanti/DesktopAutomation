@@ -162,3 +162,4 @@ C:\Users\MI2\Desktop\flaUI\MyDesktopAutomationTests\obj\Debug\net9.0\refint\MyDe
 C:\Users\MI2\Desktop\flaUI\MyDesktopAutomationTests\obj\Debug\net9.0\MyDesktopAutomationTests.pdb
 C:\Users\MI2\Desktop\flaUI\MyDesktopAutomationTests\obj\Debug\net9.0\MyDesktopAutomationTests.genruntimeconfig.cache
 C:\Users\MI2\Desktop\flaUI\MyDesktopAutomationTests\obj\Debug\net9.0\ref\MyDesktopAutomationTests.dll
+C:\Users\MI2\Desktop\flaUI\MyDesktopAutomationTests\obj\Debug\net9.0\MyDesktopAutomationTests.sourcelink.json

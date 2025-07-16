@@ -1,0 +1,9 @@
+1. File save operation end-to-end, validation(USE system.Io)
+2. cut, copy end-to-end for automating system commands like ctrl+c,ctrl+x
+3. scrolling horizontal and vertical
+4.MDI(multi document interface) there should be atleast 3 windows switching back and forth(bring to focus/front, send to back)
+5. Automate dataGrid(10 rows X 5 columns )
+  5.1 Read data 2nd row(entire row)
+  5.2 Read data 3rd entire columns
+  5.3 Read data @cell 3X4
+  5.4 Insert new row

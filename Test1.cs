@@ -21,6 +21,9 @@ using FlaUI.Core.Patterns.Infrastructure;
 using FlaUI.UIA3.Patterns;
 using System.Globalization;
 using Microsoft.VisualStudio.TestPlatform.Utilities;
+using System.Reflection.PortableExecutable;
+using System.Reflection.Metadata;
+// using FlaUI.Core.AutomationFactory;
 
 //  using FlaUI.Core.
 
@@ -114,7 +117,8 @@ public sealed class Test2
         {
             app = FlaUI.Core.Application.Launch(appPath);
             Console.WriteLine("Application.Launch called. Waiting for app to stabilize...");
-            Thread.Sleep(5000); // Increased sleep time to ensure app has time to fully load
+            //  Wait.UntilResponsive(mainWindow, TimeSpan.FromSeconds(5));
+           Thread.Sleep(5000); // Increased sleep time to ensure app has time to fully load
             Console.WriteLine("Finished initial sleep after launch.");
 
             if (app == null)
@@ -126,7 +130,8 @@ public sealed class Test2
             // Get the main window using the class-level automation instance
             Console.WriteLine("Attempting to get main window...");
             // Use a timeout for GetMainWindow as well, it's more robust
-            mainWindow = app.GetMainWindow(automation, TimeSpan.FromSeconds(10));
+            mainWindow = app.GetMainWindow(automation, TimeSpan.FromSeconds(50));
+            // Assert.That(mainWindow, Is.Not.Null, "Main window was not found after launch. Application might not have started correctly or window title/class changed.");
             if (mainWindow == null)
             {
                 // Fallback: Sometimes GetMainWindow doesn't find it immediately, try a broader search
@@ -163,7 +168,23 @@ public sealed class Test2
     {
         if (name != null)
         {
-            return parentNode.FindFirstDescendant(cf => cf.ByName(name).And(cf.ByControlType(controlType ?? ControlType.Unknown))).As<T>();
+            ConditionFactory cf = new ConditionFactory(new UIA3PropertyLibrary());
+            /*
+             PropertyCondition nameCondition = cf.ByName(name);
+            AndCondition controlTypeCondition;
+            */
+            /*
+             ConditionBase nameCondition = cf.ByName(name);
+            ConditionBase controlTypeCondition = nameCondition;
+*/
+            ConditionBase controlTypeCondition = cf.ByName(name);
+
+            if (controlType != null)
+            {
+                controlTypeCondition = controlTypeCondition.And(cf.ByControlType((ControlType)controlType));
+            }
+            
+            return parentNode.FindFirstDescendant(controlTypeCondition).As<T>();
         }
         else if (automationId != null)
         {
@@ -1500,6 +1521,113 @@ public sealed class Test2
        
     }
     [Test]
+    public void DragAndDrop()
+    {
+        var TabPage3 = mainWindow.FindFirstDescendant(cf => cf.ByAutomationId("tabPage3")).AsTabItem();
+        Assert.That(TabPage3, Is.Not.Null, "TabPage3 should be found.");
+        // Select the tab page
+        TabPage3.Select();
+        Thread.Sleep(500); // Give UI time to switch tabs
+        Console.WriteLine("Switched to TabPage3.");
+
+        // Find the DataGrid AutomationElement
+        var dataGridElement = mainWindow.FindFirstDescendant(cf => cf.ByAutomationId("dataGridView1").And(cf.ByControlType(ControlType.DataGrid)));
+        Assert.That(dataGridElement, Is.Not.Null, "DataGrid AutomationElement should be present.");
+        Console.WriteLine($"DataGrid AutomationElement found: {dataGridElement.Name} (AutomationId: {dataGridElement.AutomationId})");
+        Thread.Sleep(2000);
+        var gridPattern = dataGridElement.Patterns.Grid.Pattern;
+        Assert.That(gridPattern, Is.Not.Null, "DataGrid does not support GridPattern.");
+
+        int rowCount = gridPattern.RowCount;
+        int colCount = gridPattern.ColumnCount;
+
+        Console.WriteLine($"DataGrid reports {rowCount} rows and {colCount} columns via GridPattern.");
+
+        // Define the target column index (0-indexed, so 3rd column is index 2)
+        int targetRowIndex = 3; // This is the 3rd row (0-indexed)
+        int targetColumnIndex = 4;
+        string expectedCellValue = "4"; // Expected value for cell at (3, 4)
+        var cellElement = gridPattern.GetItem(targetRowIndex, targetColumnIndex);
+        Assert.That(cellElement, Is.Not.Null, $"Cell at row {targetRowIndex}, column {targetColumnIndex} not found.");
+        string cellValue = "";
+        // Get the value from the cell's ValuePattern
+        if (cellElement.Patterns.Value.IsSupported)
+        {
+            cellValue = cellElement.Patterns.Value.Pattern.Value;
+            Console.WriteLine($"Cell ({targetRowIndex},{targetColumnIndex}) value (ValuePattern): '{cellValue}'");
+        }
+        else
+        {
+            // If ValuePattern is not supported (e.g., for non-editable cells),
+            // try to get text directly or use a TextPattern.
+            cellValue = cellElement.Name; // Fallback to Name property
+            Console.WriteLine($"Cell ({targetRowIndex},{targetColumnIndex}) value (Name property): '{cellValue}' (ValuePattern not supported)");
+        }
+
+        var richTextBox = mainWindow.FindFirstDescendant(cf => cf.ByAutomationId("richTextBox1"));
+        Assert.That(richTextBox, Is.Not.Null, "RichTextBox AutomationElement should be present.");
+        Console.WriteLine($"RichTextBox AutomationElement found: {richTextBox.Name} (AutomationId: {richTextBox.AutomationId})");
+        Thread.Sleep(2000);
+
+        // --- Perform Drag and Drop using FlaUI's Mouse methods ---
+        // You need an Automation object (usually from Application.Attach or AutomationFactory.Get...")
+        // Assuming 'automation' is available, e.g., from `FlaUI.Core.AutomationFactory.Get </summary>()` or `app.Automation`.
+        // If you are using a FlaUI TestBase, 'Automation' might be directly accessible.
+        // Let's assume you have an 'automation' instance available. If not, you'd initialize it:
+        // var automation = new UIA3Automation(); // or UIA2Automation() depending on your application type
+
+        // 1. Get the bounding rectangle of the source cell and the target rich text box
+
+        var nextCellElement = gridPattern.GetItem(4, 4);
+        Assert.That(cellElement, Is.Not.Null, $"Cell at row {targetRowIndex}, column {targetColumnIndex} not found.");
+
+        var cellBounds = cellElement.BoundingRectangle;
+        var cellNextBounds = nextCellElement.BoundingRectangle;
+
+        // 2. Calculate the start and end points for the drag
+        // You might want to drag from the center of the cell
+        var startPoint = cellBounds.Center();
+        // And drop to the center of the rich text box, or a specific point within it
+        var endPoint = cellNextBounds.Center();
+
+        Console.WriteLine($"Starting drag from: {startPoint}");
+        Console.WriteLine($"Dropping to: {endPoint}");
+
+        // 3. Perform the drag and drop
+        // Move to start point and press mouse button down
+        Mouse.MoveTo(startPoint);
+        Mouse.Down(MouseButton.Left);
+        Thread.Sleep(200); // brief pause to simulate drag hold
+
+        // Move to end point
+        Mouse.MoveTo(endPoint);
+        Thread.Sleep(200); // simulate human-like drag
+
+        // Release mouse button to drop
+        Mouse.Up(MouseButton.Left);
+        Thread.Sleep(500); // allow UI to process drop
+
+        Button messageBoxOkButton = GetElement<Button>(mainWindow, name: "OK", controlType: ControlType.Button);
+        Assert.That(messageBoxOkButton, Is.Not.Null, "OK button should be found.");
+        messageBoxOkButton.Click();
+        Console.WriteLine("Drag and drop operation completed.");
+        Thread.Sleep(1000); // Give time for the drop action to complete in the UI
+
+        // Optional: Verify the content of the rich text box
+        // This depends on how your rich text box updates after a drop.
+        // If it has a ValuePattern, you can check its value.
+        if (richTextBox.Patterns.Value.IsSupported)
+        {
+            var rawText = richTextBox.Patterns.Value.Pattern.Value.Value;
+var trimmedText = rawText.Trim();
+            Console.WriteLine($"RichTextBox content after drop: '{trimmedText}'");
+            // Assert.That(richTextBoxValue, Contains.Substring(cellValue), "RichTextBox should contain the dropped cell value.");
+           Console.WriteLine($"expected content after drop: '{expectedCellValue}'");
+            Assert.That(trimmedText, Is.EqualTo(expectedCellValue), "RichTextBox should contain the dropped cell value.");
+        }
+    }
+    
+    [Test]
     public void SetData()
     {
 
@@ -2149,19 +2277,21 @@ public sealed class Test2
             else if (currentYear == targetYear)
             {
                 Console.WriteLine("Inside 3rd If");
-                 Button targetDayButton = GetElement<Button>(calendar, name:"23", controlType: ControlType.DataItem); // Find the button for the target day, controlType: ControlType.Button);
-                var targetDayXPath = $"//DataItem[@Name='{targetDay}']";
-                Console.WriteLine($"targetDayXPath: {targetDayXPath}");
-                // var targetDayButton = calendar.FindFirstByXPath(targetDayXPath);
-                Console.WriteLine($"targetMonth: {targetMonthButton}, targetDay: {targetDayButton}");
+                //   Button targetDayButton = GetElement<Button>(calendar, name:"23", controlType: ControlType.DataItem); // Find the button for the target day, controlType: ControlType.Button);
+                                                                                                                       // var targetDayXPath = $"//DataItem[@Name='{targetDay}']";
+                //  var targetDayButton = calendar.FindAllDescendants(cf => cf.ByControlType(ControlType.DataItem).And(cf.ByName(targetDay)));
+                //  var targetDayButton = calendar.FindAllChildren(cf => cf.ByControlType(ControlType.DataItem).And(cf.ByName(targetDay)));
+                // Console.WriteLine($"targetDayXPath: {targetDayXPath}");
+                // var targetDayButton = calendar.FindFirstByXPath("//DataItem[@Name='23']");
+                Console.WriteLine($"targetMonth: {targetMonthButton}");
                 // Assert.That(targetDayButton, Is.Not.Null, "Target day button not found.");
                 targetMonthButton.Click();
                 // Wait.UntilInputIsProcessed(TimeSpan.FromSeconds(1));
-              Thread.Sleep(20000);
+                Thread.Sleep(20000);
+                Button targetDayButton = GetElement<Button>(calendar, name:"23", controlType: ControlType.DataItem);
+                Console.WriteLine($"targetDayButton: {targetDayButton}");
                 targetDayButton.Click();
-                 
-        
-                 break;
+                break;
                 
             }
                 else

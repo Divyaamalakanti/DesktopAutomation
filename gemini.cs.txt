@@ -1,0 +1,109 @@
+using FlaUI.Core;
+using FlaUI.Core.AutomationElements;
+using FlaUI.Core.Definitions;
+using FlaUI.UIA3;
+using System;
+using System.Linq;
+
+public class CalendarAutomation
+{
+    public static void Main(string[] args)
+    {
+        // Start the WinForms application or attach to an existing one
+        // For demonstration, let's assume the application is already running.
+        // Replace "YourWinFormsAppTitle" with the actual title of your application window.
+        // Or if you launch it, you'd do something like:
+        // var app = Application.Launch("PathToYourWinFormsApp.exe");
+        // var mainWindow = app.Get=[true].MainWindow;
+
+        using (var automation = new UIA3Automation())
+        {
+            var mainWindow = automation.Get<AutomationElement>().FromApplication("YourWinFormsAppTitle"); // Replace with actual app title
+
+            if (mainWindow == null)
+            {
+                Console.WriteLine("Main window not found. Please ensure the application is running and the title is correct.");
+                return;
+            }
+
+            // Find the Calendar Control. Based on the screenshot, it's inside a pane.
+            // You might need to adjust the FindAll options based on your specific application's hierarchy.
+            var calendarControl = mainWindow.FindFirstDescendant(cf => cf.ByControlType(ControlType.Pane).And(cf.ByName("Calendar Control")));
+
+            if (calendarControl == null)
+            {
+                Console.WriteLine("Calendar Control not found.");
+                return;
+            }
+
+            Console.WriteLine("Calendar Control found.");
+
+            // 1. Automate clicking on date "15"
+            // Find the table that contains the dates
+            var dateTable = calendarControl.FindFirstDescendant(cf => cf.ByControlType(ControlType.Table));
+            if (dateTable != null)
+            {
+                // Find the specific date "15". Based on the Accessibility Insights, dates are "item 'X'".
+                var date15 = dateTable.FindFirstDescendant(cf => cf.ByControlType(ControlType.DataItem).And(cf.ByName("15")));
+                if (date15 != null)
+                {
+                    date15.Click();
+                    Console.WriteLine("Clicked on date 15.");
+                }
+                else
+                {
+                    Console.WriteLine("Date 15 not found.");
+                }
+            }
+            else
+            {
+                Console.WriteLine("Date Table not found in Calendar Control.");
+            }
+
+            // 2. Automate clicking on "December, 2025" button (Month/Year selector)
+            // Based on Accessibility Insights, it's a pane named "01 December 2025".
+            // This is likely a button or a clickable element that opens the month/year selection.
+            var monthYearButton = calendarControl.FindFirstDescendant(cf => cf.ByControlType(ControlType.Pane).And(cf.ByName("01 December 2025")));
+            if (monthYearButton != null)
+            {
+                monthYearButton.Click();
+                Console.WriteLine("Clicked on 'December, 2025' (Month/Year selector).");
+                // After clicking, a new UI might appear for month/year selection.
+                // You would need to inspect that new UI to automate further selection.
+            }
+            else
+            {
+                Console.WriteLine("'December, 2025' (Month/Year selector) not found.");
+            }
+
+            // 3. Automate clicking on navigation buttons (Previous and Next Months)
+            // These are typically buttons. Their names or AutomationIds would be specific.
+            // You'll need to inspect their properties using Accessibility Insights.
+            // For demonstration, let's assume they have "Previous" and "Next" in their names.
+
+            // Find Previous Month button
+            var previousMonthButton = calendarControl.FindFirstDescendant(cf => cf.ByControlType(ControlType.Button).And(cf.ByName("Previous")));
+            if (previousMonthButton != null)
+            {
+                previousMonthButton.Click();
+                Console.WriteLine("Clicked on 'Previous Month' button.");
+            }
+            else
+            {
+                Console.WriteLine("'Previous Month' button not found. Please check its Name/AutomationId.");
+            }
+
+            // Find Next Month button
+            var nextMonthButton = calendarControl.FindFirstDescendant(cf => cf.ByControlType(ControlType.Button).And(cf.ByName("Next")));
+            if (nextMonthButton != null)
+            {
+                nextMonthButton.Click();
+                Console.WriteLine("Clicked on 'Next Month' button.");
+            }
+            else
+            {
+                Console.WriteLine("'Next Month' button not found. Please check its Name/AutomationId.");
+            }
+        }
+    }
+}

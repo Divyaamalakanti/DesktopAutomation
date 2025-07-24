@@ -1,0 +1,76 @@
+using FlaUI.Core;
+using FlaUI.UIA3;
+using FlaUI.Core.AutomationElements;
+using FlaUI.Core.Tools;
+using System;
+
+public class CalendarAutomation
+{
+    private static IApplication app;
+    private static IUIA3Automation automation;
+
+    public static void Main(string[] args)
+    {
+        // Initialize FlaUI automation
+        automation = new UIA3Automation();
+        
+        // Launch the application
+        app = FlaUI.Core.Application.Launch("path_to_your_application");
+
+        // Get the main window of the application
+        var mainWindow = app.GetMainWindow(automation);
+
+        // Automating actions
+        SelectDate("15");
+        SelectMonthYear("December, 2025");
+        NavigateToPreviousMonth();
+        NavigateToNextMonth();
+
+        // Close the application
+        app.Close();
+    }
+
+    // Function to select a specific date
+    private static void SelectDate(string date)
+    {
+        var dateElement = mainWindow.FindFirstDescendant(cf => cf.ByXPath($"//table//td[@aria-label='{date}']"));
+        if (dateElement != null)
+        {
+            dateElement.Click();
+            Console.WriteLine($"Selected date {date}");
+        }
+    }
+
+    // Function to select the month and year (e.g., December 2025)
+    private static void SelectMonthYear(string monthYear)
+    {
+        var monthYearButton = mainWindow.FindFirstDescendant(cf => cf.ByXPath($"//button[@aria-label='{monthYear}']"));
+        if (monthYearButton != null)
+        {
+            monthYearButton.Click();
+            Console.WriteLine($"Selected month/year: {monthYear}");
+        }
+    }
+
+    // Function to navigate to the previous month
+    private static void NavigateToPreviousMonth()
+    {
+        var prevMonthButton = mainWindow.FindFirstDescendant(cf => cf.ByXPath("//button[@aria-label='Previous month']"));
+        if (prevMonthButton != null)
+        {
+            prevMonthButton.Click();
+            Console.WriteLine("Navigated to previous month");
+        }
+    }
+
+    // Function to navigate to the next month
+    private static void NavigateToNextMonth()
+    {
+        var nextMonthButton = mainWindow.FindFirstDescendant(cf => cf.ByXPath("//button[@aria-label='Next month']"));
+        if (nextMonthButton != null)
+        {
+            nextMonthButton.Click();
+            Console.WriteLine("Navigated to next month");
+        }
+    }
+}

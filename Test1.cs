@@ -1,5 +1,6 @@
 ﻿using FlaUI.Core;
 using FlaUI.Core.AutomationElements;
+using FlaUI.Core.AutomationElements.PatternElements;
 using FlaUI.Core.Definitions;
 using FlaUI.Core.Conditions;
 using FlaUI.Core.Identifiers;
@@ -16,6 +17,11 @@ using FlaUI.Core.WindowsAPI;//For clipboard operations
 using FlaUI.Core.Input; // For keyboard and mouse input
 using FlaUI.Core.AutomationElements.Infrastructure;
 using System.Diagnostics.CodeAnalysis;
+using FlaUI.Core.Patterns.Infrastructure;
+using FlaUI.UIA3.Patterns;
+using System.Globalization;
+using Microsoft.VisualStudio.TestPlatform.Utilities;
+
 //  using FlaUI.Core.
 
 // For AutomationElement extensions
@@ -153,6 +159,24 @@ public sealed class Test2
 
         Console.WriteLine("--- Setup Finished ---");
     }
+     private static T GetElement<T>(AutomationElement parentNode, string? name = null, string? automationId = null, ControlType? controlType = null) where T : AutomationElement
+    {
+        if (name != null)
+        {
+            return parentNode.FindFirstDescendant(cf => cf.ByName(name).And(cf.ByControlType(controlType ?? ControlType.Unknown))).As<T>();
+        }
+        else if (automationId != null)
+        {
+            return parentNode.FindFirstDescendant(cf => cf.ByAutomationId(automationId)).As<T>();
+        }
+        else
+        {
+            return parentNode.FindFirstDescendant(cf => cf.ByControlType(ControlType.Unknown)).As<T>();
+        }
+
+       
+    }
+
     [Test]
     public void VerifyApplicationLabel()
     {
@@ -513,12 +537,9 @@ public sealed class Test2
         // The 'Save' MenuItem might appear as a descendant of the 'File' menu itself or globally in the desktop.
         // Let's first try as a descendant of the opened 'File' menu (more robust).
         var saveMenuItem = fileMenuItem.FindFirstDescendant(cf => cf.ByControlType(ControlType.MenuItem).And(cf.ByName("Save"))).AsMenuItem();
-        if (saveMenuItem == null)
-        {
-            // Fallback: If not found as a descendant of fileMenuItem, try finding it globally on the desktop
-            // This sometimes happens if the menu is a top-level window itself.
-            saveMenuItem = automation.GetDesktop().FindFirstDescendant(cf => cf.ByControlType(ControlType.MenuItem).And(cf.ByName("Save"))).AsMenuItem();
-        }
+        // Fallback: If not found as a descendant of fileMenuItem, try finding it globally on the desktop
+        // This sometimes happens if the menu is a top-level window itself.
+        saveMenuItem ??= automation.GetDesktop().FindFirstDescendant(cf => cf.ByControlType(ControlType.MenuItem).And(cf.ByName("Save"))).AsMenuItem();
         // Using Assert.That(..., Is.Not.Null)
         Assert.That(saveMenuItem, Is.Not.Null, "Save menu item not found after clicking 'File'.");
         saveMenuItem.Click();  //to click menu items
@@ -967,17 +988,299 @@ public sealed class Test2
         // not necessarily the 'TextBox' wrapper that FlaUI provides for text interaction.
         var hScrollBar = richTextBoxAutomationElement.FindFirstDescendant(cf => cf.ByControlType(ControlType.ScrollBar).And(cf.ByAutomationId("NonClientHorizontalScrollBar")));
         Assert.That(hScrollBar, Is.Not.Null, "Horizontal scrollbar should be present.");
-        Assert.That(hScrollBar.Properties.IsEnabled.Value, Is.True, "Horizontal scrollbar should be enabled.");
         Console.WriteLine("Horizontal scrollbar found and enabled.");
 
         var vScrollBar = richTextBoxAutomationElement.FindFirstDescendant(cf => cf.ByControlType(ControlType.ScrollBar).And(cf.ByAutomationId("NonClientVerticalScrollBar")));
         Assert.That(vScrollBar, Is.Not.Null, "Vertical scrollbar should be present.");
-        Assert.That(vScrollBar.Properties.IsEnabled.Value, Is.True, "Vertical scrollbar should be enabled.");
         Console.WriteLine("Vertical scrollbar found and enabled.");
-        //TODO: Scrollbar opertion 
+
+        // Ensure the RichTextBox has focus before sending keys
+        richTextBox.Focus();
+        Thread.Sleep(500); // Give a moment for focus to register
+        // IScrollPattern scrollPattern = null;
+        //  scrollPattern = richTextBoxAutomationElement.Patterns.Scroll.PatternOrDefault;
+        // return scrollPattern != null && scrollPattern.current.HorizontallyScrollable && scrollPattern.Current.VerticallyScrollable;
+
+        // Scroll Down (Vertical)
+        Console.WriteLine("Scrolling down with PageDown key...");
+        Keyboard.Press(VirtualKeyShort.NEXT); // VK_NEXT is PageDown
+        Thread.Sleep(1000); // Give time for scroll to happen
+        // Assert.That(scrollPattern)
+
+        // Scroll Down to End (Vertical)
+        Console.WriteLine("Scrolling to end with Control + End keys...");
+        Keyboard.Press(VirtualKeyShort.CONTROL); // Press Ctrl
+        Keyboard.Press(VirtualKeyShort.END);     // Press End
+        Keyboard.Release(VirtualKeyShort.END);   // Release End
+        Keyboard.Release(VirtualKeyShort.CONTROL); // Release Ctrl
+        Thread.Sleep(1000);
+
+        // Scroll Up (Vertical)
+        Console.WriteLine("Scrolling up with PageUp key...");
+        Keyboard.Press(VirtualKeyShort.PRIOR); // VK_PRIOR is PageUp
+        Thread.Sleep(1000);
+
+        // Scroll Up to Beginning (Vertical)
+        Console.WriteLine("Scrolling to beginning with Control + Home keys...");
+        Keyboard.Press(VirtualKeyShort.CONTROL);
+        Keyboard.Press(VirtualKeyShort.HOME);
+        Keyboard.Release(VirtualKeyShort.HOME);
+        Keyboard.Release(VirtualKeyShort.CONTROL);
+        Thread.Sleep(1000);
+
+        // Scroll Right (Horizontal) - Requires element to be multiline with word wrap off, or similar setup
+        // RichTextBox by default might wrap text, making horizontal scroll with arrow keys less effective.
+        // You might need to send ArrowRight multiple times for fine-grained horizontal scroll.
+        Console.WriteLine("Scrolling right with Right Arrow key...");
+        Keyboard.Press(VirtualKeyShort.RIGHT); // VK_RIGHT is Right Arrow
+        Thread.Sleep(1000);
+
+        // Scroll Left (Horizontal)
+        Console.WriteLine("Scrolling left with Left Arrow key...");
+        Keyboard.Press(VirtualKeyShort.LEFT); // VK_LEFT is Left Arrow
+        Thread.Sleep(1000);
     }
-   
+    //     Button LineUp = vScrollBar.FindFirstDescendant(cf => cf.ByControlType(ControlType.Button).And(cf.ByName("Line Up"))).AsButton();
+    //     Assert.That(LineUp, Is.Not.Null, "Line Up button should be found as a descendant of the vertical scrollbar.");
+    //     Console.WriteLine("LineUp button found");
+
+    //     LineUp.Click();
+    //     Console.WriteLine("Line up button clicked to scroll");
+    //     Thread.Sleep(2000); // Shorter sleep for responsiveness
+
+    //     Button LineDown = vScrollBar.FindFirstDescendant(cf => cf.ByControlType(ControlType.Button).And(cf.ByName("Line Down"))).AsButton();
+    //     Assert.That(LineDown, Is.Not.Null, "Line Down button should be found as a descendant of the vertical scrollbar.");
+    //     Console.WriteLine("LineDown button found");
+
+    //     LineDown.Click(); // Changed from LineUp.Click() to LineDown.Click()
+    //     Console.WriteLine("Line Down button clicked to scroll");
+    //     Thread.Sleep(2000); // Shorter sleep for responsiveness
+    // }
+
+    //     // -------------------------------------------------------
+    //     // Re-adding the IScrollPattern operations from earlier successful discussion
+    //     // This is still the preferred way to scroll for many controls.
+    //     IScrollPattern scrollPattern = null;
+    //     bool patternAvailable = richTextBoxAutomationElement.WaitUntil(() =>
+    //     {
+    //         scrollPattern = richTextBoxAutomationElement.Patterns.Scroll.PatternOrDefault;
+    //         return scrollPattern != null && scrollPattern.Current.HorizontallyScrollable && scrollPattern.Current.VerticallyScrollable;
+    //     }, TimeSpan.FromSeconds(15), TimeSpan.FromMilliseconds(500)); 
+
+    //     Assert.That(patternAvailable, Is.True, "ScrollPattern did not become available or scrollable on the RichTextBox itself.");
+    //     Assert.That(scrollPattern, Is.Not.Null, "ScrollPattern is null after waiting on RichTextBox.");
+
+    //     // ... (rest of your IScrollPattern operations as discussed previously) ...
+    //     // Example:
+    //     Console.WriteLine("\n--- Performing Horizontal Scroll Operations (via IScrollPattern) ---");
+    //     Assert.That(scrollPattern.Current.HorizontallyScrollable, Is.True, "RichTextBox should be horizontally scrollable.");
+    //     Assert.That(scrollPattern.Current.HorizontalScrollPercent, Is.Zero, "RichTextBox should initially be at 0% horizontal scroll.");
+    //     scrollPattern.Scroll(ScrollAmount.LargeIncrement, ScrollAmount.NoAmount);
+    //     Thread.Sleep(1000);
+    //     Console.WriteLine($"Horizontal scroll percent after large increment: {scrollPattern.Current.HorizontalScrollPercent}");
+    //     Assert.That(scrollPattern.Current.HorizontalScrollPercent, Is.GreaterThan(0.0), "RichTextBox should have scrolled right.");
+    //     scrollPattern.SetScrollPercent(100.0, -1.0);
+    //     Thread.Sleep(1000);
+    //     Console.WriteLine($"Horizontal scroll percent after setting to 100%: {scrollPattern.Current.HorizontalScrollPercent}");
+    //     Assert.That(scrollPattern.Current.HorizontalScrollPercent, Is.EqualTo(100.0), "RichTextBox should be at 100% horizontal scroll.");
+
+    //     // Add the vertical scroll operations from IScrollPattern as well...
+    //     Console.WriteLine("\n--- Performing Vertical Scroll Operations (via IScrollPattern) ---");
+    //     Assert.That(scrollPattern.Current.VerticallyScrollable, Is.True, "RichTextBox should be vertically scrollable.");
+    //     Assert.That(scrollPattern.Current.VerticalScrollPercent, Is.Zero, "RichTextBox should initially be at 0% vertical scroll.");
+    //     scrollPattern.Scroll(ScrollAmount.NoAmount, ScrollAmount.LargeIncrement);
+    //     Thread.Sleep(1000);
+    //     Console.WriteLine($"Vertical scroll percent after large increment: {scrollPattern.Current.VerticalScrollPercent}");
+    //     Assert.That(scrollPattern.Current.VerticalScrollPercent, Is.GreaterThan(0.0), "RichTextBox should have scrolled down.");
+    //     scrollPattern.SetScrollPercent(-1.0, 100.0);
+    //     Thread.Sleep(1000);
+    //     Console.WriteLine($"Vertical scroll percent after setting to 100%: {scrollPattern.Current.VerticalScrollPercent}");
+    //     Assert.That(scrollPattern.Current.VerticalScrollPercent, Is.EqualTo(100.0), "RichTextBox should be at 100% vertical scroll.");
+    // }
+
+
+
+    // Scroll to the end (bottom)
+    // scrollPattern.SetScrollPercent(-1.0, 100.0);
+    // Thread.Sleep(1000);
+    // Console.WriteLine($"Vertical scroll percent after setting to 100%: {scrollPattern.Current.VerticalScrollPercent}");
+    // Assert.That(scrollPattern.Current.VerticalScrollPercent, Is.EqualTo(100.0), "RichTextBox should be at 100% vertical scroll.");
+
+    // // Scroll back up by a large amount
+    // scrollPattern.Scroll(ScrollAmount.NoAmount, ScrollAmount.LargeDecrement);
+    // Thread.Sleep(1000);
+    // Console.WriteLine($"Vertical scroll percent after large decrement: {scrollPattern.Current.VerticalScrollPercent}");
+    // Assert.That(scrollPattern.Current.VerticalScrollPercent, Is.LessThan(100.0), "RichTextBox should have scrolled up.");
+
+    // // Scroll back to beginning (0%)
+    // scrollPattern.SetScrollPercent(-1.0, 0.0);
+    // Thread.Sleep(1000);
+    // Console.WriteLine($"Vertical scroll percent after setting to 0%: {scrollPattern.Current.VerticalScrollPercent}");
+    // Assert.That(scrollPattern.Current.VerticalScrollPercent, Is.EqualTo(0.0), "RichTextBox should be at 0% vertical scroll.");
+
+
+    // // Explicitly cast to ScrollPattern to access .Current
+    // var hScrollPatternCasted = (ScrollPattern)hScrollPattern;
+    // var vScrollPatternCasted = (ScrollPattern)vScrollPattern;
+
+    // // --- Horizontal Scrollbar Operations ---
+    // Console.WriteLine("\n--- Performing Horizontal Scroll Operations ---");
+    // Assert.That(hScrollPatternCasted.HorizontallyScrollable, Is.True, "Horizontal scrollbar should be horizontally scrollable.");
+    // Assert.That(hScrollPatternCasted.HorizontalScrollPercent, Is.Zero, "Horizontal scrollbar should initially be at 0%.");
+    // // Scroll right by a large amount (e.g., one page)
+    // hScrollPatternCasted.Scroll(ScrollAmount.LargeIncrement, ScrollAmount.NoAmount);
+    // Thread.Sleep(1000); // Give UI time to scroll
+    // Console.WriteLine($"Horizontal scroll percent after large increment: {hScrollPatternCasted.HorizontalScrollPercent}");
+    // Assert.That(Convert.ToDouble(hScrollPatternCasted.HorizontalScrollPercent), Is.GreaterThan(0.0), "Horizontal scrollbar should have scrolled right.");
+    // // Scroll to the end (rightmost)
+    // hScrollPatternCasted.SetScrollPercent(100.0, -1.0);
+    // Thread.Sleep(1000);
+    // Console.WriteLine($"Horizontal scroll percent after setting to 100%: {hScrollPatternCasted.HorizontalScrollPercent}");
+    // Assert.That(Convert.ToDouble(hScrollPatternCasted.HorizontalScrollPercent), Is.EqualTo(100.0), "Horizontal scrollbar should be at 100%.");
+    // // vertical scrollbar operations
+    // Console.WriteLine("\n--- Performing Vertical Scroll Operations ---");
+    // Assert.That(vScrollPatternCasted.VerticallyScrollable, Is.True, "Vertical scrollbar should be vertically scrollable.");
+    // Assert.That(vScrollPatternCasted.VerticalScrollPercent, Is.Zero, "Vertical scrollbar should initially be at 0%.");
+    // // Scroll down by a large amount (e.g., one page)
+    // vScrollPatternCasted.Scroll(ScrollAmount.LargeIncrement, ScrollAmount.NoAmount);
+    // Thread.Sleep(1000); // Give UI time to scroll
+    // Console.WriteLine($"Vertical scroll percent after large increment: {vScrollPatternCasted.VerticalScrollPercent}");
+    // Assert.That(Convert.ToDouble(vScrollPatternCasted.VerticalScrollPercent), Is.GreaterThan(0.0), "Vertical scrollbar should have scrolled down.");
+    // // Scroll to the end (bottom)
+    // vScrollPatternCasted.SetScrollPercent(-1.0, 100.0);
+    // Thread.Sleep(1000);
+    // Console.WriteLine($"Vertical scroll percent after setting to 100%: {vScrollPatternCasted.VerticalScrollPercent}");
+    // Assert.That(Convert.ToDouble(vScrollPatternCasted.VerticalScrollPercent), Is.EqualTo(100.0), "Vertical scrollbar should be at 100%.");
     [Test]
+    public void TryScroll()
+    {
+    
+        // ... (existing code to find TabPage3 and richTextBoxAutomationElement) ...
+        var TabPage3 = mainWindow.FindFirstDescendant(cf => cf.ByAutomationId("tabPage3")).AsTabItem();
+        Assert.That(TabPage3, Is.Not.Null, "TabPage3 should be found.");
+        TabPage3.Select();
+        Thread.Sleep(500);
+        Console.WriteLine("Switched to TabPage3.");
+
+        var richTextBoxAutomationElement = mainWindow.FindFirstDescendant(cf => cf.ByAutomationId("richTextBox1"));
+        Assert.That(richTextBoxAutomationElement, Is.Not.Null, "RichTextBox AutomationElement should be found.");
+
+        var richTextBoxAsTextBox = richTextBoxAutomationElement.AsTextBox();
+        Assert.That(richTextBoxAsTextBox, Is.Not.Null, "RichTextBox (as TextBox) should be castable.");
+        Console.WriteLine("RichTextBox found and cast to TextBox.");
+
+        string horizontalLinePart = "This is an extremely long line designed to force the horizontal scrollbar into existence. We're repeating this segment multiple times to ensure it far exceeds the typical width of a RichTextBox. Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. ";
+        string verticalLinePart = "This is a line for vertical scrolling. This will be repeated many times to ensure the vertical scrollbar appears and becomes active.";
+
+        string longText = string.Concat(Enumerable.Repeat(horizontalLinePart, 5)) + "\n";
+        longText += string.Join("\n", Enumerable.Repeat(verticalLinePart, 50));
+
+        richTextBoxAsTextBox.Text = string.Empty;
+        richTextBoxAsTextBox.Enter(longText);
+        Console.WriteLine($"Entered text into RichTextBox. Text length: {longText.Length}");
+
+        Thread.Sleep(2000); // Give UI time to render and for focus to settle
+
+        // Get the IScrollPattern from the RichTextBox itself for assertions
+        // DECLARE scrollPattern HERE, OUTSIDE THE LAMBDA
+        // IScrollPattern scrollPattern = null; // <--- This declaration should be here
+
+        // // bool patternAvailable = richTextBoxAutomationElement.WaitUntil(() =>
+        // {
+        //     // Assign to the 'scrollPattern' declared above, not a new local one
+        //     scrollPattern = richTextBoxAutomationElement.Patterns.Scroll.PatternOrDefault;
+        //     return scrollPattern != null && scrollPattern.Current.HorizontallyScrollable && scrollPattern.Current.VerticallyScrollable;
+        // }, TimeSpan.FromSeconds(15), TimeSpan.FromMilliseconds(500));
+
+        // using (Assert.EnterMultipleScope())
+        // {
+        //     Assert.That(patternAvailable, Is.True, "ScrollPattern did not become available or scrollable on the RichTextBox itself.");
+        //     Assert.That(scrollPattern, Is.Not.Null, "ScrollPattern is null after waiting on RichTextBox.");
+        // }
+
+        // // --- Keyboard Scroll Operations ---
+        // Console.WriteLine("\n--- Performing Scroll Operations via Keyboard Keys ---");
+
+        // // Ensure the RichTextBox has focus before sending keys
+        // richTextBoxAsTextBox.Focus();
+        // Thread.Sleep(500);
+
+        // // --- Vertical Scroll Assertions ---
+        // Console.WriteLine("Verifying vertical scrolling...");
+
+    //     // Initial vertical scroll percentage
+    //     double initialVerticalScroll = scrollPattern.Current.VerticalScrollPercent;
+    //     Console.WriteLine($"Initial Vertical Scroll Percent: {initialVerticalScroll}");
+    //     Assert.That(initialVerticalScroll, Is.Zero, "RichTextBox should initially be at 0% vertical scroll.");
+
+    //     // Scroll Down (PageDown) and Assert
+    //     Console.WriteLine("Scrolling down with PageDown key...");
+    //     Keyboard.Press(VirtualKeyShort.NEXT);
+    //     Thread.Sleep(1000);
+    //     double verticalScrollAfterPageDown = scrollPattern.Current.VerticalScrollPercent;
+    //     Console.WriteLine($"Vertical Scroll Percent after PageDown: {verticalScrollAfterPageDown}");
+    //     Assert.That(verticalScrollAfterPageDown, Is.GreaterThan(initialVerticalScroll), "Vertical scroll should have increased after PageDown.");
+
+    //     // Scroll to End (Ctrl + End) and Assert
+    //     Console.WriteLine("Scrolling to end with Control + End keys...");
+    //     Keyboard.Press(VirtualKeyShort.CONTROL);
+    //     Keyboard.Press(VirtualKeyShort.END);
+    //     Keyboard.Release(VirtualKeyShort.END);
+    //     Keyboard.Release(VirtualKeyShort.CONTROL);
+    //     Thread.Sleep(1000);
+    //     double verticalScrollAtEnd = scrollPattern.Current.VerticalScrollPercent;
+    //     Console.WriteLine($"Vertical Scroll Percent at End: {verticalScrollAtEnd}");
+    //     Assert.That(verticalScrollAtEnd, Is.EqualTo(100.0), "Vertical scroll should be at 100% after Ctrl+End.");
+
+    //     // Scroll Up (PageUp) and Assert
+    //     Console.WriteLine("Scrolling up with PageUp key...");
+    //     Keyboard.Press(VirtualKeyShort.PRIOR);
+    //     Thread.Sleep(1000);
+    //     double verticalScrollAfterPageUp = scrollPattern.Current.VerticalScrollPercent;
+    //     Console.WriteLine($"Vertical Scroll Percent after PageUp: {verticalScrollAfterPageUp}");
+    //     Assert.That(verticalScrollAfterPageUp, Is.LessThan(100.0), "Vertical scroll should have decreased after PageUp.");
+    //     Assert.That(verticalScrollAfterPageUp, Is.GreaterThanOrEqualTo(0.0), "Vertical scroll should not go below 0% after PageUp.");
+
+
+    //     // Scroll to Beginning (Ctrl + Home) and Assert
+    //     Console.WriteLine("Scrolling to beginning with Control + Home keys...");
+    //     Keyboard.Press(VirtualKeyShort.CONTROL);
+    //     Keyboard.Press(VirtualKeyShort.HOME);
+    //     Keyboard.Release(VirtualKeyShort.HOME);
+    //     Keyboard.Release(VirtualKeyShort.CONTROL);
+    //     Thread.Sleep(1000);
+    //     double verticalScrollAtBeginning = scrollPattern.Current.VerticalScrollPercent;
+    //     Console.WriteLine($"Vertical Scroll Percent at Beginning: {verticalScrollAtBeginning}");
+    //     Assert.That(verticalScrollAtBeginning, Is.EqualTo(0.0), "Vertical scroll should be at 0% after Ctrl+Home.");
+
+
+    //     // --- Horizontal Scroll Assertions ---
+    //     Console.WriteLine("\nVerifying horizontal scrolling...");
+
+    //     double initialHorizontalScroll = scrollPattern.Current.HorizontalScrollPercent;
+    //     Console.WriteLine($"Initial Horizontal Scroll Percent: {initialHorizontalScroll}");
+    //     Assert.That(initialHorizontalScroll, Is.Zero, "RichTextBox should initially be at 0% horizontal scroll.");
+
+    //     // Scroll Right (Right Arrow) and Assert
+    //     Console.WriteLine("Scrolling right with Right Arrow key...");
+    //     Keyboard.Press(VirtualKeyShort.RIGHT);
+    //     Thread.Sleep(1000);
+    //     double horizontalScrollAfterRightArrow = scrollPattern.Current.HorizontalScrollPercent;
+    //     Console.WriteLine($"Horizontal Scroll Percent after Right Arrow: {horizontalScrollAfterRightArrow}");
+    //     Assert.That(horizontalScrollAfterRightArrow, Is.GreaterThan(initialHorizontalScroll), "Horizontal scroll should have increased after Right Arrow.");
+
+    //     // Scroll Left (Left Arrow) and Assert
+    //     Console.WriteLine("Scrolling left with Left Arrow key...");
+    //     Keyboard.Press(VirtualKeyShort.LEFT);
+    //     Thread.Sleep(1000);
+    //     double horizontalScrollAfterLeftArrow = scrollPattern.Current.HorizontalScrollPercent;
+    //     Console.WriteLine($"Horizontal Scroll Percent after Left Arrow: {horizontalScrollAfterLeftArrow}");
+    //     Assert.That(horizontalScrollAfterLeftArrow, Is.LessThan(horizontalScrollAfterRightArrow), "Horizontal scroll should have decreased after Left Arrow.");
+    //     Assert.That(horizontalScrollAfterLeftArrow, Is.GreaterThanOrEqualTo(0.0), "Horizontal scroll should not go below 0% after Left Arrow.");
+    }
+
+
+        [Test]
     public void DataGridTest1()
     {
         var tabPage3 = mainWindow.FindFirstDescendant(cf => cf.ByAutomationId("tabPage3")).AsTabItem();
@@ -1230,28 +1533,40 @@ public sealed class Test2
         {
             var cell = gridPattern.GetItem(targetRowIndex, col);
             Assert.That(cell, Is.Not.Null, $"Cell at row {targetRowIndex}, column {col} not found.");
-            switch (col)
+             if (!cell.Patterns.Value.Pattern.IsReadOnly)
+           
             {
-                case 0:
-                    cell.Patterns.Value.Pattern.SetValue("11");
-                    Console.WriteLine($"Set value '11' in cell ({targetRowIndex},{col})");
-                    break;
-                case 1:
-                    cell.Patterns.Value.Pattern.SetValue("Name 11");
-                    Console.WriteLine($"Set value 'Name 11' in cell ({targetRowIndex},{col})");
-                    break;
-                case 2:
-                    cell.Patterns.Value.Pattern.SetValue("31");
-                    Console.WriteLine($"Set value '31' in cell ({targetRowIndex},{col})");
-                    break;
-                case 3:
-                    cell.Patterns.Value.Pattern.SetValue("500");
-                    Console.WriteLine($"Set value '500' in cell ({targetRowIndex},{col})");
-                    break;
-                case 4:
-                    cell.Patterns.Value.Pattern.SetValue("11");
-                    Console.WriteLine($"Set value '11' in cell ({targetRowIndex},{col})");
-                    break;
+
+                Console.WriteLine($"Cell at row {targetRowIndex}, column {col} is editable.");
+
+
+                switch (col)
+                {
+                    case 0:
+                        cell.Patterns.Value.Pattern.SetValue("11");
+                        Console.WriteLine($"Set value '11' in cell ({targetRowIndex},{col})");
+                        break;
+                    case 1:
+                        cell.Patterns.Value.Pattern.SetValue("Name 11");
+                        Console.WriteLine($"Set value 'Name 11' in cell ({targetRowIndex},{col})");
+                        break;
+                    case 2:
+                        cell.Patterns.Value.Pattern.SetValue("31");
+                        Console.WriteLine($"Set value '31' in cell ({targetRowIndex},{col})");
+                        break;
+                    case 3:
+                        cell.Patterns.Value.Pattern.SetValue("500");
+                        Console.WriteLine($"Set value '500' in cell ({targetRowIndex},{col})");
+                        break;
+                    case 4:
+                        cell.Patterns.Value.Pattern.SetValue("11");
+                        Console.WriteLine($"Set value '11' in cell ({targetRowIndex},{col})");
+                        break;
+                }
+            }
+            else
+            {
+                Console.WriteLine($"Cell at row {targetRowIndex}, column {col} is read-only.");
             }
         }
         // Verify the set data
@@ -1265,11 +1580,318 @@ public sealed class Test2
             Assert.That(cell, Is.Not.Null, $"Cell at row {targetRowIndex}, column {col} not found.");
             Console.WriteLine($"Cell value at row {targetRowIndex}, column {col}: {cell.Patterns.Value.Pattern.Value}");
             actualElement = cell.Patterns.Value.Pattern.Value;
-
+            actualArray = [.. actualArray, actualElement];
+           
         }
-        actualArray = [.. actualArray, actualElement];
-                // actualArray = actualArray.Append(actualElement).ToArray();
+        
+        Console.WriteLine($"Actual array: [{string.Join(", ", actualArray)}]");
+        Assert.That(actualArray, Is.EqualTo(expectedArray),
+            $"Data mismatch in row {targetRowIndex}.\nExpected: [{string.Join(", ", expectedArray)}]\nActual: [{string.Join(", ", actualArray)}]");
+        Console.WriteLine($"Data set in row {targetRowIndex} successfully.");
+       
+         
+     }
+     [Test]
+    public void InsertRow()
+    {
 
+        var TabPage3 = mainWindow.FindFirstDescendant(cf => cf.ByAutomationId("tabPage3")).AsTabItem();
+        Assert.That(TabPage3, Is.Not.Null, "TabPage3 should be found.");
+        // Select the tab page
+        TabPage3.Select();
+        Thread.Sleep(500); // Give UI time to switch tabs
+        Console.WriteLine("Switched to TabPage3.");
+        // 1. Find the TabControl and select TabPage3
+
+        // 2. Find the DataGrid AutomationElement
+        // We get the AutomationElement directly, no AsDataGrid() here.
+        var dataGridElement = mainWindow.FindFirstDescendant(cf => cf.ByAutomationId("dataGridView1").And(cf.ByControlType(ControlType.DataGrid)));
+        Assert.That(dataGridElement, Is.Not.Null, "DataGrid AutomationElement should be present.");
+        Console.WriteLine($"DataGrid AutomationElement found: {dataGridElement.Name} (AutomationId: {dataGridElement.AutomationId})");
+        Thread.Sleep(2000); // Give UI time to render DataGrid contents
+
+        // 3. Get the GridPattern
+        var gridPattern = dataGridElement.Patterns.Grid.Pattern;
+        Assert.That(gridPattern, Is.Not.Null, "DataGrid does not support GridPattern.");
+
+        int rowCount = gridPattern.RowCount;
+        int colCount = gridPattern.ColumnCount;
+        var targetRowIndex = 10; // This is the 11th row (0-indexed, after the header row if present)
+
+        Assert.That(targetRowIndex, Is.LessThan(rowCount), $"Target row index {targetRowIndex} is out of bounds. Max row index is {rowCount - 1}.");
+
+        Console.WriteLine($"DataGrid reports {rowCount} rows and {colCount} columns via GridPattern.");
+        for (int col = 0; col < colCount; col++)
+        {
+            var cell = gridPattern.GetItem(targetRowIndex, col);
+            Thread.Sleep(2000);
+            Assert.That(cell, Is.Not.Null, $"Cell at row {targetRowIndex}, column {col} not found.");
+             if (!cell.Patterns.Value.Pattern.IsReadOnly)
+           
+            {
+
+                Console.WriteLine($"Cell at row {targetRowIndex}, column {col} is editable.");
+
+
+                switch (col)
+                {
+                    case 0:
+                        cell.Patterns.Value.Pattern.SetValue("11");
+                        Console.WriteLine($"Set value '11' in cell ({targetRowIndex},{col})");
+                        break;
+                    case 1:
+                        cell.Patterns.Value.Pattern.SetValue("Name 11");
+                        Console.WriteLine($"Set value 'Name 11' in cell ({targetRowIndex},{col})");
+                        break;
+                    case 2:
+                        cell.Patterns.Value.Pattern.SetValue("31");
+                        Console.WriteLine($"Set value '31' in cell ({targetRowIndex},{col})");
+                        break;
+                    case 3:
+                        cell.Patterns.Value.Pattern.SetValue("500");
+                        Console.WriteLine($"Set value '500' in cell ({targetRowIndex},{col})");
+                        break;
+                    case 4:
+                        cell.Patterns.Value.Pattern.SetValue("11");
+                        Console.WriteLine($"Set value '11' in cell ({targetRowIndex},{col})");
+                        break;
+                }
+            }
+            else
+            {
+                Console.WriteLine($"Cell at row {targetRowIndex}, column {col} is read-only.");
+            }
+        }
+        // Verify the set data
+        string[] expectedArray = [ "11", "Name 11", "31", "500", "11" ];
+        string[] actualArray = [];
+        string actualElement = "";
+
+        for (int col = 0; col < colCount; col++)
+        {
+            var cell = gridPattern.GetItem(targetRowIndex, col);
+            Thread.Sleep(1000);
+            Assert.That(cell, Is.Not.Null, $"Cell at row {targetRowIndex}, column {col} not found.");
+            Console.WriteLine($"Cell value at row {targetRowIndex}, column {col}: {cell.Patterns.Value.Pattern.Value}");
+            actualElement = cell.Patterns.Value.Pattern.Value;
+            actualArray = [.. actualArray, actualElement];
+           
+        }
+        
+        Console.WriteLine($"Actual array: [{string.Join(", ", actualArray)}]");
+        Assert.That(actualArray, Is.EqualTo(expectedArray),
+            $"Data mismatch in row {targetRowIndex}.\nExpected: [{string.Join(", ", expectedArray)}]\nActual: [{string.Join(", ", actualArray)}]");
+        Console.WriteLine($"Data set in row {targetRowIndex} successfully.");
+       
+         
+     }
+    [Test]
+    public void DeleteRow()
+    {
+        var TabPage3 = GetElement<TabItem>(mainWindow, name: "tabPage3", controlType: ControlType.TabItem);
+        Assert.That(TabPage3, Is.Not.Null, "TabPage3 should be found.");
+        // Select the tab page
+        TabPage3.Select();
+        Wait.UntilInputIsProcessed(); // Give UI time to switch tabs
+        Console.WriteLine("Switched to TabPage3.");
+        // 1. Find the TabControl and select TabPage3
+
+        // 2. Find the DataGrid AutomationElement
+        // We get the AutomationElement directly, no AsDataGrid() here.
+        var dataGridElement = GetElement<DataGridView>(mainWindow, automationId: "dataGridView1", controlType: ControlType.DataGrid);
+        Assert.That(dataGridElement, Is.Not.Null, "DataGrid AutomationElement should be present.");
+        Console.WriteLine($"DataGrid AutomationElement found: {dataGridElement.Name} (AutomationId: {dataGridElement.AutomationId})");
+        var dataGridResponse = Wait.UntilResponsive(dataGridElement, TimeSpan.FromSeconds(10)); // Give UI time to render DataGrid contents
+        Assert.That(dataGridResponse, Is.True, "DataGrid is not responsive after 10 seconds.");
+        // 3. Get the GridPattern
+        var gridPattern = dataGridElement.Patterns.Grid.Pattern;
+        Assert.That(gridPattern, Is.Not.Null, "DataGrid does not support GridPattern.");
+
+        int rowCount = gridPattern.RowCount;
+        int colCount = gridPattern.ColumnCount;
+        var targetRowIndex = 4; // This is the 11th row (0-indexed, after the header row if present)
+        Console.WriteLine($"DataGrid reports {rowCount} rows and {colCount} columns via GridPattern.");
+        Assert.That(targetRowIndex, Is.LessThan(rowCount), $"Target row index {targetRowIndex} is out of bounds. Max row index is {rowCount - 1}.");
+        var rowHeadrer = GetElement<DataGridViewRow>(dataGridElement, name: "Row 4", controlType: ControlType.Header);
+        Assert.That(rowHeadrer, Is.Not.Null, "RowHeader should be found.");
+        rowHeadrer.Click();
+        Wait.UntilInputIsProcessed(); // Give UI time to process click event
+        Console.WriteLine("RowHeader clicked.");
+        rowHeadrer.RightClick();
+        Wait.UntilInputIsProcessed(); // Give UI time to process click event
+        Console.WriteLine("RowHeader right-clicked.");
+        var deleteMenuItem = GetElement<MenuItem>(mainWindow, name: "Delete Row", controlType: ControlType.MenuItem);
+        Assert.That(deleteMenuItem, Is.Not.Null, "Delete menu item should be found.");
+        deleteMenuItem.Click();
+        Wait.UntilInputIsProcessed(); // Give UI time to process click event
+        Console.WriteLine("Delete menu item clicked.");
+        var messageBoxLabel = GetElement<Label>(mainWindow, name: "Row deleted successfully!", controlType: ControlType.Text);
+        Assert.That(messageBoxLabel, Is.Not.Null, "Message box label should be found.");
+        Console.WriteLine("Message box label found.");
+        var okButton = GetElement<Button>(mainWindow, name: "OK", controlType: ControlType.Button);
+        Assert.That(okButton, Is.Not.Null, "OK button should be found.");
+        okButton.Click();
+        Wait.UntilInputIsProcessed(); // Give UI time to process click event
+        Console.WriteLine("OK button clicked.");
+
+    }
+    [Test]
+    public void SearchInDataGrid()
+    {
+        var TabPage3 = GetElement<TabItem>(mainWindow, name: "tabPage3", controlType: ControlType.TabItem);
+        Assert.That(TabPage3, Is.Not.Null, "TabPage3 should be found.");
+        // Select the tab page
+        TabPage3.Select();
+        Wait.UntilInputIsProcessed(); // Give UI time to switch tabs
+        Console.WriteLine("Switched to TabPage3.");
+        // 1. Find the TabControl and select TabPage3
+
+        // 2. Find the DataGrid AutomationElement
+        // We get the AutomationElement directly, no AsDataGrid() here.
+        var dataGridElement = GetElement<DataGridView>(mainWindow, automationId: "dataGridView1", controlType: ControlType.DataGrid);
+        Assert.That(dataGridElement, Is.Not.Null, "DataGrid AutomationElement should be present.");
+        Console.WriteLine($"DataGrid AutomationElement found: {dataGridElement.Name} (AutomationId: {dataGridElement.AutomationId})");
+        TextBox textBox = GetElement<TextBox>(mainWindow, name: "Search Text", controlType: ControlType.Edit);
+        Assert.That(textBox, Is.Not.Null, "TextBox 'Search' should be found.");
+        Console.WriteLine($"TextBox found: {textBox.Name}");
+        textBox.Text = string.Empty;
+        Wait.UntilInputIsProcessed(); // Give UI time to process input
+        textBox.Enter("Name 9");
+        Console.WriteLine($"Text entered: {textBox.Text}");// Give UI time to process input
+        Button button = GetElement<Button>(mainWindow, name: "Search Button", controlType: ControlType.Button);
+        Assert.That(button, Is.Not.Null, "Button 'Search' should be found.");
+        Console.WriteLine($"Button found: {button.Name}");
+        button.Click();
+        Wait.UntilInputIsProcessed(); // Give UI time to process click
+        Console.WriteLine("Button clicked.");
+        var gridPattern = dataGridElement.Patterns.Grid.Pattern;
+        Assert.That(gridPattern, Is.Not.Null, "DataGrid does not support GridPattern.");
+
+       
+        int colCount = gridPattern.ColumnCount;
+         string[] expectedArray = [ "9", "Name 9", "29", "1800", "9" ];
+        string[] actualArray = [];
+        string actualElement;
+        var targetRowIndex = 0;
+        for (int col = 0; col < colCount; col++)
+        {
+            var cell = gridPattern.GetItem(targetRowIndex, col);
+            Thread.Sleep(1000);
+            Assert.That(cell, Is.Not.Null, $"Cell at row {targetRowIndex}, column {col} not found.");
+            Console.WriteLine($"Cell value at row {targetRowIndex}, column {col}: {cell.Patterns.Value.Pattern.Value}");
+            actualElement = cell.Patterns.Value.Pattern.Value;
+            actualArray = [.. actualArray, actualElement];
+           
+        }
+        
+        Console.WriteLine($"Actual array: [{string.Join(", ", actualArray)}]");
+        Assert.That(actualArray, Is.EqualTo(expectedArray),
+            $"Data mismatch in row {targetRowIndex}.\nExpected: [{string.Join(", ", expectedArray)}]\nActual: [{string.Join(", ", actualArray)}]");
+        Console.WriteLine($"Row {targetRowIndex} found and verified successfully.");
+       
+        
+        
+
+    }
+    [Test]
+    public void VerifyDataGridColumnsAutoResizeOnFill()
+    {
+        // 1. Select TabPage3 where the DataGrid is located
+        var tabPage3 = GetElement<TabItem>(mainWindow, name: "tabPage3", controlType: ControlType.TabItem);
+        Assert.That(tabPage3, Is.Not.Null, "TabPage3 should be found.");
+        // Select the tab page
+        tabPage3.Select();
+        Wait.UntilInputIsProcessed(); // Give UI time to switch tabs
+        Console.WriteLine("Switched to TabPage3.");
+        // 1. Find the TabControl and select TabPage3
+
+        // 2. Find the DataGrid AutomationElement
+        // We get the AutomationElement directly, no AsDataGrid() here.
+        var dataGridElement = GetElement<DataGridView>(mainWindow, automationId: "dataGridView1", controlType: ControlType.DataGrid);
+        Assert.That(dataGridElement, Is.Not.Null, "DataGrid AutomationElement should be present.");
+        Console.WriteLine($"DataGrid AutomationElement found: {dataGridElement.Name} (AutomationId: {dataGridElement.AutomationId})");
+        var gridPattern = dataGridElement.Patterns.Grid.Pattern;
+        Assert.That(gridPattern, Is.Not.Null, "DataGrid does not support GridPattern.");
+
+        int rowCount = gridPattern.RowCount;
+        int colCount = gridPattern.ColumnCount;
+        var targetRowIndex = 10; // This is the 11th row (0-indexed, after the header row if present)
+
+        Assert.That(targetRowIndex, Is.LessThan(rowCount), $"Target row index {targetRowIndex} is out of bounds. Max row index is {rowCount - 1}.");
+        var initialColumnElements = dataGridElement.Header.Columns;
+        Assert.That(initialColumnElements.Length, Is.EqualTo(colCount), "Expected 5 columns.");
+
+        double initialDataGridWidth = dataGridElement.BoundingRectangle.Width;
+        double initialColumnsTotalWidth = initialColumnElements.Sum(c => c.BoundingRectangle.Width);
+        Console.WriteLine($"Initial DataGrid Width: {initialDataGridWidth}");
+        Console.WriteLine($"Initial Columns Total Width: {initialColumnsTotalWidth}");
+        Console.WriteLine($"DataGrid reports {rowCount} rows and {colCount} columns via GridPattern.");
+        for (int col = 0; col < colCount; col++)
+        {
+            var cell = gridPattern.GetItem(targetRowIndex, col);
+            Thread.Sleep(2000);
+            Assert.That(cell, Is.Not.Null, $"Cell at row {targetRowIndex}, column {col} not found.");
+            if (!cell.Patterns.Value.Pattern.IsReadOnly)
+
+            {
+
+                Console.WriteLine($"Cell at row {targetRowIndex}, column {col} is editable.");
+
+
+                switch (col)
+                {
+                    case 0:
+                        cell.Patterns.Value.Pattern.SetValue("11");
+                        Console.WriteLine($"Set value '11' in cell ({targetRowIndex},{col})");
+                        break;
+                    case 1:
+                        cell.Patterns.Value.Pattern.SetValue("Name 11");
+                        Console.WriteLine($"Set value 'Name 11' in cell ({targetRowIndex},{col})");
+                        break;
+                    case 2:
+                        cell.Patterns.Value.Pattern.SetValue("3111111111111111111111111111111");
+                        Console.WriteLine($"Set value '31' in cell ({targetRowIndex},{col})");
+                        break;
+                    case 3:
+                        cell.Patterns.Value.Pattern.SetValue("500");
+                        Console.WriteLine($"Set value '500' in cell ({targetRowIndex},{col})");
+                        break;
+                    case 4:
+                        cell.Patterns.Value.Pattern.SetValue("11");
+                        Console.WriteLine($"Set value '11' in cell ({targetRowIndex},{col})");
+                        break;
+                }
+            }
+            else
+            {
+                Console.WriteLine($"Cell at row {targetRowIndex}, column {col} is read-only.");
+            }
+        }
+        var currentDataGridWidth = dataGridElement.BoundingRectangle.Width;
+        var currentColumnsTotalWidth = initialColumnElements.Sum(c => c.BoundingRectangle.Width);
+        Console.WriteLine($"Final DataGrid Width: {currentDataGridWidth}");
+        Console.WriteLine($"Final Columns Total Width: {currentColumnsTotalWidth}");
+        Console.WriteLine($"DataGrid reports {rowCount} rows and {colCount} columns via GridPattern.");
+
+
+        Assert.That(currentColumnsTotalWidth, Is.GreaterThanOrEqualTo(initialColumnsTotalWidth),
+            $"Columns should fill the DataGrid. Total columns width ({currentColumnsTotalWidth}) " +
+            $"is too small compared to DataGrid width ({currentDataGridWidth}).");
+       string[] expectedArray = [ "11", "Name 11", "3111111111111111111111111111111", "500", "11" ];
+        string[] actualArray = [];
+        string actualElement = "";
+
+        for (int col = 0; col < colCount; col++)
+        {
+            var cell = gridPattern.GetItem(targetRowIndex, col);
+           
+            Assert.That(cell, Is.Not.Null, $"Cell at row {targetRowIndex}, column {col} not found.");
+            Console.WriteLine($"Cell value at row {targetRowIndex}, column {col}: {cell.Patterns.Value.Pattern.Value}");
+            actualElement = cell.Patterns.Value.Pattern.Value;
+            actualArray = [.. actualArray, actualElement];
+           
+        }
+        
         Console.WriteLine($"Actual array: [{string.Join(", ", actualArray)}]");
         Assert.That(actualArray, Is.EqualTo(expectedArray),
             $"Data mismatch in row {targetRowIndex}.\nExpected: [{string.Join(", ", expectedArray)}]\nActual: [{string.Join(", ", actualArray)}]");
@@ -1278,7 +1900,292 @@ public sealed class Test2
          
      }
 
-   
+       
+    
+    [Test]
+    public void TreeTest()
+    {
+        var treeItemMI2 = mainWindow.FindFirstDescendant(cf => cf.ByName("MI2").And(cf.ByControlType(ControlType.TreeItem))).AsTreeItem();
+        Assert.That(treeItemMI2, Is.Not.Null, "TreeItem 'MI2' should be found.");
+        Console.WriteLine($"TreeItem found: {treeItemMI2.Name}");
+        treeItemMI2.Expand();
+
+        ITogglePattern togglePattern;
+        togglePattern = treeItemMI2.Patterns.Toggle.Pattern;
+        
+        Console.WriteLine("Initial state of 'MI2' checkbox: Unchecked");     
+
+        if (togglePattern.ToggleState == ToggleState.Off)
+        {
+            togglePattern.Toggle(); // This action will click the checkbox
+            Console.WriteLine($"Toggled 'MI2' checkbox to checked state.");
+        }
+        else
+        {
+            Console.WriteLine($"'MI2' checkbox was already in the '{togglePattern.ToggleState}' state. No toggle action needed.");
+        }
+        Assert.That(togglePattern.ToggleState, Is.EqualTo(ToggleState.On), "The 'MI2' checkbox should be checked.");
+
+        
+        var treeItemAravind = treeItemMI2.FindFirstDescendant(cf => cf.ByName("Aravind").And(cf.ByControlType(ControlType.TreeItem))).AsTreeItem();
+        Assert.That(treeItemAravind, Is.Not.Null, "TreeItem 'Aravind' should be found as a descendant of 'MI2'.");
+        Console.WriteLine($"TreeItem 'Aravind' found within 'MI2' hierarchy.");
+
+        // Assert that 'Shailaja' is a descendant of 'MI2'
+        var treeItemShailaja = treeItemMI2.FindFirstDescendant(cf => cf.ByName("Shailaja").And(cf.ByControlType(ControlType.TreeItem))).AsTreeItem();
+        Assert.That(treeItemShailaja, Is.Not.Null, "TreeItem 'Shailaja' should be found as a descendant of 'MI2'.");
+        Console.WriteLine($"TreeItem 'Shailaja' found within 'MI2' hierarchy.");
+        treeItemShailaja.Expand();
+
+
+        // Assert that 'Vijay' is a descendant of 'MI2'
+        var treeItemEmployee = treeItemShailaja.FindFirstDescendant(cf => cf.ByName("employee").And(cf.ByControlType(ControlType.TreeItem))).AsTreeItem();
+        Assert.That(treeItemEmployee, Is.Not.Null, "TreeItem 'employee' should be found as a descendant of 'MI2'.");
+        Console.WriteLine($"TreeItem 'employee' found within 'Shailaja' hierarchy.");
+        var treeItemCustomer = treeItemShailaja.FindFirstDescendant(cf => cf.ByName("customer").And(cf.ByControlType(ControlType.TreeItem))).AsTreeItem();
+        Assert.That(treeItemCustomer, Is.Not.Null, "TreeItem 'customer' should be found as a descendant of 'MI2'.");
+        Console.WriteLine($"TreeItem 'customer' found within 'Shailaja' hierarchy.");
+       
+    }
+    [Test]
+    public void DatePickerTest1()
+    {
+        Console.WriteLine("Starting DatePickerTest1...");
+
+        // 1. Select TabPage4
+        // Passing timeout as the last positional argument.
+        Tab tab4 = GetElement<Tab>(mainWindow, name: "tabPage4", controlType: ControlType.TabItem);
+        Assert.That(tab4, Is.Not.Null, "Tab 'tabPage4' should be found.");
+        Console.WriteLine($"Tab found: {tab4.Name}");
+        tab4.Click();
+        FlaUI.Core.Input.Wait.UntilInputIsProcessed(TimeSpan.FromSeconds(1));
+
+        // 2. Find the DatePicker ComboBox
+        ComboBox datePickerElement = GetElement<ComboBox>(mainWindow, name: "DatePicker", controlType: ControlType.ComboBox);
+        Assert.That(datePickerElement, Is.Not.Null, "DatePicker 'DatePicker' should be found.");
+        Console.WriteLine($"DatePicker element found: {datePickerElement.Name}");
+
+        IValuePattern valuePattern = datePickerElement.Patterns.Value.Pattern;
+        IExpandCollapsePattern expandCollapsePattern = datePickerElement.Patterns.ExpandCollapse.Pattern;
+
+        // Define the target date (e.g., September 22, 2026)
+        var targetDate = new DateTime(2025, 9, 1);
+        Console.WriteLine($"Target Date: {targetDate.ToShortDateString()}");
+        var targetDay = targetDate.Day.ToString();
+        Console.WriteLine($"Target Day: {targetDay}");
+        // Define the expected display format in the DatePicker's text field after selection
+        string expectedDisplayFormat = targetDate.ToString("dd MMMM yyyy", CultureInfo.InvariantCulture);
+        Console.WriteLine($"Expected Final Display Format: '{expectedDisplayFormat}'");
+        string currentMonthYear = DateTime.Now.ToString("MMMM, yyyy", CultureInfo.InvariantCulture);
+        Console.WriteLine($"Current Month/Year: '{currentMonthYear}'");
+        // --- Step 3: Expand the DatePicker to show the calendar ---
+        expandCollapsePattern.Expand();
+        Console.WriteLine($"DatePicker expanded.");
+        FlaUI.Core.Input.Wait.UntilInputIsProcessed(TimeSpan.FromSeconds(1));
+
+        // --- Step 4: Find the Calendar control ---
+        AutomationElement calendar = GetElement<AutomationElement>(mainWindow, name: "Calendar Control", controlType: ControlType.Pane);
+        Assert.That(calendar, Is.Not.Null, "Calendar 'Calendar Control' should be found.");
+        Console.WriteLine($"Calendar found.");
+        FlaUI.Core.Input.Wait.UntilResponsive(calendar, TimeSpan.FromSeconds(5));
+        FlaUI.Core.Input.Wait.UntilInputIsProcessed(TimeSpan.FromSeconds(1));
+
+
+        // --- Step 5: Find navigation buttons and the current month/year display ---
+        // Button nextMonthButton = GetElement<Button>(calendar, name: "Next Button", controlType: ControlType.Button);
+        // Button prevMonthButton = GetElement<Button>(calendar, name: "Previous Button", controlType: ControlType.Button);
+        Button currentMonthYearDisplayButton = GetElement<Button>(calendar, name: currentMonthYear, controlType: ControlType.Button);
+        Console.WriteLine($"currentMonthYearDisplayButton found.{currentMonthYearDisplayButton.Name}");
+        // Assert.That(nextMonthButton, Is.Not.Null, "Next month navigation button not found.");
+        // Assert.That(prevMonthButton, Is.Not.Null, "Previous month navigation button not found.");
+        Console.WriteLine("Calendar navigation buttons found.");
+        // Button targetDayButton = GetElement<Button>(calendar, name: targetDay, controlType: ControlType.DataItem); // Find the button for the target day, controlType: ControlType.Button);
+        // Assert.That(targetDayButton, Is.Not.Null, "Target day button not found.");
+        // Console.WriteLine($"Target day button found: {targetDayButton.Name}");
+        Wait.UntilInputIsProcessed(TimeSpan.FromSeconds(1));
+        var targetMonth = targetDate.Month;
+     
+        var targetYear = targetDate.Year;   
+        Console.WriteLine($"Target Month: {targetMonth}, Target Year: {targetYear}");
+        var currentMonth = DateTime.Now.Month; 
+        var currentYear = DateTime.Now.Year; 
+         Button nextMonthButton = GetElement<Button>(calendar, name: "Next Button", controlType: ControlType.Button);
+        Button prevMonthButton = GetElement<Button>(calendar, name: "Previous Button", controlType: ControlType.Button);
+
+        for (int i = 0; i < 12; i++)
+        {
+             Button targetDayButton = GetElement<Button>(calendar, name: targetDay, controlType: ControlType.DataItem); // Find the button for the target day, controlType: ControlType.Button);
+
+            Console.WriteLine($"Current Month: {currentMonth}, Current Year: {currentYear}");
+            if (nextMonthButton != null && prevMonthButton != null && targetYear < currentYear || targetMonth < currentMonth)
+            {
+                Console.WriteLine("Inside first If");
+                Thread.Sleep(1000);
+                prevMonthButton.Click();
+                Console.WriteLine("previous month button clicked.");
+                Wait.UntilInputIsProcessed(TimeSpan.FromSeconds(1));
+            }
+            if (nextMonthButton != null && prevMonthButton != null && targetYear > currentYear || targetMonth > currentMonth)
+            {
+                Console.WriteLine("Inside 2nd If");
+
+                Thread.Sleep(5000);
+                nextMonthButton.Click();
+
+
+                Console.WriteLine("next month button clicked.");
+                Wait.UntilInputIsProcessed(TimeSpan.FromSeconds(1));
+            }
+
+            else if (targetDayButton != null && targetYear == currentYear && targetMonth == currentMonth)
+            {
+                Console.WriteLine("Inside 3rd If");
+
+                targetDayButton.Click();
+                Wait.UntilInputIsProcessed(TimeSpan.FromSeconds(1));
+                break;
+            }
+            else
+            {
+                Console.WriteLine("Target date not found in current month.");
+            }
+            currentMonth = DateTime.Now.AddMonths(i+1).Month;
+
+
+        }
+
+
+        // --- Step 6: Verify the selected date ---
+        string selectedDateText = datePickerElement.Value;
+        Console.WriteLine($"Selected date: {selectedDateText}");
+        Assert.That(selectedDateText, Is.EqualTo(expectedDisplayFormat), $"Selected date '{selectedDateText}' does not match the expected display format '{expectedDisplayFormat}'.");
+
+
+        }
+    [Test]
+    public void YearselectionTest()
+    {
+    
+        Console.WriteLine("Starting DatePickerTest1...");
+
+        // 1. Select TabPage4
+        // Passing timeout as the last positional argument.
+        Tab tab4 = GetElement<Tab>(mainWindow, name: "tabPage4", controlType: ControlType.TabItem);
+        Assert.That(tab4, Is.Not.Null, "Tab 'tabPage4' should be found.");
+        Console.WriteLine($"Tab found: {tab4.Name}");
+        tab4.Click();
+        FlaUI.Core.Input.Wait.UntilInputIsProcessed(TimeSpan.FromSeconds(1));
+
+        // 2. Find the DatePicker ComboBox
+        ComboBox datePickerElement = GetElement<ComboBox>(mainWindow, name: "DatePicker", controlType: ControlType.ComboBox);
+        Assert.That(datePickerElement, Is.Not.Null, "DatePicker 'DatePicker' should be found.");
+        Console.WriteLine($"DatePicker element found: {datePickerElement.Name}");
+
+        IValuePattern valuePattern = datePickerElement.Patterns.Value.Pattern;
+        IExpandCollapsePattern expandCollapsePattern = datePickerElement.Patterns.ExpandCollapse.Pattern;
+
+        // Define the target date (e.g., September 22, 2026)
+        var targetDate = new DateTime(2028, 9, 23);
+        Console.WriteLine($"Target Date: {targetDate.ToShortDateString()}");
+        var targetDay = targetDate.Day.ToString();
+        Console.WriteLine($"Target Day: {targetDay}");
+        // Define the expected display format in the DatePicker's text field after selection
+        string expectedDisplayFormat = targetDate.ToString("dd MMMM yyyy", CultureInfo.InvariantCulture);
+        Console.WriteLine($"Expected Final Display Format: '{expectedDisplayFormat}'");
+        string currentMonthYear = DateTime.Now.ToString("MMMM, yyyy", CultureInfo.InvariantCulture);
+        Console.WriteLine($"Current Month/Year: '{currentMonthYear}'");
+        // --- Step 3: Expand the DatePicker to show the calendar ---
+        expandCollapsePattern.Expand();
+        Console.WriteLine($"DatePicker expanded.");
+        FlaUI.Core.Input.Wait.UntilInputIsProcessed(TimeSpan.FromSeconds(1));
+
+        // --- Step 4: Find the Calendar control ---
+        AutomationElement calendar = GetElement<AutomationElement>(mainWindow, name: "Calendar Control", controlType: ControlType.Pane);
+        Assert.That(calendar, Is.Not.Null, "Calendar 'Calendar Control' should be found.");
+        Console.WriteLine($"Calendar found.");
+        FlaUI.Core.Input.Wait.UntilResponsive(calendar, TimeSpan.FromSeconds(5));
+        FlaUI.Core.Input.Wait.UntilInputIsProcessed(TimeSpan.FromSeconds(1));
+
+
+        // --- Step 5: Find navigation buttons and the current month/year display ---
+        // Button nextMonthButton = GetElement<Button>(calendar, name: "Next Button", controlType: ControlType.Button);
+        // Button prevMonthButton = GetElement<Button>(calendar, name: "Previous Button", controlType: ControlType.Button);
+        Button currentMonthYearDisplayButton = GetElement<Button>(calendar, name: currentMonthYear, controlType: ControlType.Button);
+        Console.WriteLine($"currentMonthYearDisplayButton found.{currentMonthYearDisplayButton.Name}");
+        // Assert.That(nextMonthButton, Is.Not.Null, "Next month navigation button not found.");
+        // Assert.That(prevMonthButton, Is.Not.Null, "Previous month navigation button not found.");
+        Console.WriteLine("Calendar navigation buttons found.");
+        // Button targetDayButton = GetElement<Button>(calendar, name: targetDay, controlType: ControlType.DataItem); // Find the button for the target day, controlType: ControlType.Button);
+        // Assert.That(targetDayButton, Is.Not.Null, "Target day button not found.");
+        // Console.WriteLine($"Target day button found: {targetDayButton.Name}");
+        Wait.UntilInputIsProcessed(TimeSpan.FromSeconds(1));
+        currentMonthYearDisplayButton.Click();
+        var targetMonth = targetDate.ToString("MMMM", CultureInfo.InvariantCulture);
+        Console.WriteLine($"Target Month: {targetMonth}");
+        var targetYear = targetDate.Year;   
+        Console.WriteLine($"Target Month: {targetMonth}, Target Year: {targetYear}");
+        var currentMonth = DateTime.Now.Month; 
+        var currentYear = DateTime.Now.Year; 
+         Button nextMonthButton = GetElement<Button>(calendar, name: "Next Button", controlType: ControlType.Button);
+        Button prevMonthButton = GetElement<Button>(calendar, name: "Previous Button", controlType: ControlType.Button);
+
+        for (int i = 0; i < 5; i++)
+        {
+            Button targetMonthButton = GetElement<Button>(calendar, name: "Sep", controlType: ControlType.DataItem); //
+
+            if (currentYear > targetYear)
+            {
+                Console.WriteLine("Inside 1st If");
+                prevMonthButton.Click();
+                Wait.UntilInputIsProcessed(TimeSpan.FromSeconds(1));
+            }
+            else if (currentYear < targetYear)
+            {
+                Console.WriteLine($"Current Year: {currentYear}, Target Year: {targetYear}");
+                Console.WriteLine("Inside 2nd If");
+                nextMonthButton.Click();
+                Wait.UntilInputIsProcessed(TimeSpan.FromSeconds(1));
+            }
+            else if (currentYear == targetYear)
+            {
+                Console.WriteLine("Inside 3rd If");
+                 Button targetDayButton = GetElement<Button>(calendar, name:"23", controlType: ControlType.DataItem); // Find the button for the target day, controlType: ControlType.Button);
+                var targetDayXPath = $"//DataItem[@Name='{targetDay}']";
+                Console.WriteLine($"targetDayXPath: {targetDayXPath}");
+                // var targetDayButton = calendar.FindFirstByXPath(targetDayXPath);
+                Console.WriteLine($"targetMonth: {targetMonthButton}, targetDay: {targetDayButton}");
+                // Assert.That(targetDayButton, Is.Not.Null, "Target day button not found.");
+                targetMonthButton.Click();
+                // Wait.UntilInputIsProcessed(TimeSpan.FromSeconds(1));
+              Thread.Sleep(20000);
+                targetDayButton.Click();
+                 
+        
+                 break;
+                
+            }
+                else
+                {
+                    Console.WriteLine("Target date not found ");
+                }
+            currentYear = DateTime.Now.AddYears(i + 1).Year;
+        }
+        Assert.That(currentYear, Is.EqualTo(targetYear), "Target year not found in current year range.");
+        Console.WriteLine($"Target year found in current year range: {currentYear}");
+        
+
+        
+
+
+        // --- Step 6: Verify the selected date ---
+        string selectedDateText = datePickerElement.Value;
+        Console.WriteLine($"Selected date: {selectedDateText}");
+        Assert.That(selectedDateText, Is.EqualTo(expectedDisplayFormat), $"Selected date '{selectedDateText}' does not match the expected display format '{expectedDisplayFormat}'.");
+
+
+        }
+
+       
     [TearDown]
     public void Teardown()
     {

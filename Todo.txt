@@ -15,6 +15,11 @@
   date picker 
   calender
   slider
+  datagrid(Multi row delete)
+  Duplicate row in datagrid(1 row delete operation)
+  unique identification of row.
+  delete all rows from datagrid
+  column reordering 
 
 TODO:
 1. scrolling

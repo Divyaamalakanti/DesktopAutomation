@@ -1,109 +1,267 @@
-using FlaUI.Core;
-using FlaUI.Core.AutomationElements;
-using FlaUI.Core.Definitions;
-using FlaUI.UIA3;
+using NUnit.Framework;
 using System;
 using System.Linq;
+using System.Windows.Automation; // Assuming this is your UI Automation library
 
-public class CalendarAutomation
+public class YourAutomationClass // Replace with your actual class name
 {
-    public static void Main(string[] args)
+    // Assuming these are globally accessible or passed in
+    private AutomationElement mainWindow; 
+    // And your GetElement and Wait utility methods
+
+    public void ContextMenu_DeleteRow_Unique()
     {
-        // Start the WinForms application or attach to an existing one
-        // For demonstration, let's assume the application is already running.
-        // Replace "YourWinFormsAppTitle" with the actual title of your application window.
-        // Or if you launch it, you'd do something like:
-        // var app = Application.Launch("PathToYourWinFormsApp.exe");
-        // var mainWindow = app.Get=[true].MainWindow;
+        var TabPage3 = GetElement<TabItem>(mainWindow, name: "tabPage3", controlType: ControlType.TabItem);
+        Assert.That(TabPage3, Is.Not.Null, "TabPage3 should be found.");
+        TabPage3.Select();
+        Wait.UntilInputIsProcessed(); 
+        Console.WriteLine("Switched to TabPage3.");
 
-        using (var automation = new UIA3Automation())
+        var dataGridElement = GetElement<DataGridView>(mainWindow, automationId: "dataGridView1", controlType: ControlType.DataGrid);
+        Assert.That(dataGridElement, Is.Not.Null, "DataGrid AutomationElement should be present.");
+        Console.WriteLine($"DataGrid AutomationElement found: {dataGridElement.Name} (AutomationId: {dataGridElement.AutomationId})");
+
+        var dataGridResponse = Wait.UntilResponsive(dataGridElement, TimeSpan.FromSeconds(10));
+        Assert.That(dataGridResponse, Is.True, "DataGrid is not responsive after 10 seconds.");
+
+        var gridPattern = dataGridElement.Patterns.Grid.Pattern;
+        Assert.That(gridPattern, Is.Not.Null, "DataGrid does not support GridPattern.");
+
+        // --- Step 1: Identify a unique row to delete ---
+        // You need to know some unique data in your grid. Let's assume there's a column
+        // that uniquely identifies a row, e.g., an "ID" or "Name" column.
+        // For demonstration, let's target a row where a specific cell contains "UniqueItem123".
+        string uniqueRowIdentifier = "UniqueItem123"; // This is the unique data you expect in a cell
+        int columnIndexForIdentifier = 0; // Assuming the unique identifier is in the first column (0-indexed)
+
+        AutomationElement targetRowElement = null;
+        int initialRowCount = gridPattern.RowCount;
+
+        // Iterate through rows to find the unique one
+        for (int i = 0; i < initialRowCount; i++)
         {
-            var mainWindow = automation.Get<AutomationElement>().FromApplication("YourWinFormsAppTitle"); // Replace with actual app title
+            AutomationElement row = gridPattern.GetItem(i, 0); // Get the first cell of the row
+            Assert.That(row, Is.Not.Null, $"Could not retrieve row {i} from DataGrid.");
 
-            if (mainWindow == null)
-            {
-                Console.WriteLine("Main window not found. Please ensure the application is running and the title is correct.");
-                return;
-            }
+            // Get the text from the cell (assuming it's a TextPattern or ValuePattern)
+            string cellText = GetCellText(row); // Helper method to extract text from a cell
 
-            // Find the Calendar Control. Based on the screenshot, it's inside a pane.
-            // You might need to adjust the FindAll options based on your specific application's hierarchy.
-            var calendarControl = mainWindow.FindFirstDescendant(cf => cf.ByControlType(ControlType.Pane).And(cf.ByName("Calendar Control")));
-
-            if (calendarControl == null)
+            if (cellText != null && cellText.Contains(uniqueRowIdentifier))
             {
-                Console.WriteLine("Calendar Control not found.");
-                return;
-            }
-
-            Console.WriteLine("Calendar Control found.");
-
-            // 1. Automate clicking on date "15"
-            // Find the table that contains the dates
-            var dateTable = calendarControl.FindFirstDescendant(cf => cf.ByControlType(ControlType.Table));
-            if (dateTable != null)
-            {
-                // Find the specific date "15". Based on the Accessibility Insights, dates are "item 'X'".
-                var date15 = dateTable.FindFirstDescendant(cf => cf.ByControlType(ControlType.DataItem).And(cf.ByName("15")));
-                if (date15 != null)
-                {
-                    date15.Click();
-                    Console.WriteLine("Clicked on date 15.");
-                }
-                else
-                {
-                    Console.WriteLine("Date 15 not found.");
-                }
-            }
-            else
-            {
-                Console.WriteLine("Date Table not found in Calendar Control.");
-            }
-
-            // 2. Automate clicking on "December, 2025" button (Month/Year selector)
-            // Based on Accessibility Insights, it's a pane named "01 December 2025".
-            // This is likely a button or a clickable element that opens the month/year selection.
-            var monthYearButton = calendarControl.FindFirstDescendant(cf => cf.ByControlType(ControlType.Pane).And(cf.ByName("01 December 2025")));
-            if (monthYearButton != null)
-            {
-                monthYearButton.Click();
-                Console.WriteLine("Clicked on 'December, 2025' (Month/Year selector).");
-                // After clicking, a new UI might appear for month/year selection.
-                // You would need to inspect that new UI to automate further selection.
-            }
-            else
-            {
-                Console.WriteLine("'December, 2025' (Month/Year selector) not found.");
-            }
-
-            // 3. Automate clicking on navigation buttons (Previous and Next Months)
-            // These are typically buttons. Their names or AutomationIds would be specific.
-            // You'll need to inspect their properties using Accessibility Insights.
-            // For demonstration, let's assume they have "Previous" and "Next" in their names.
-
-            // Find Previous Month button
-            var previousMonthButton = calendarControl.FindFirstDescendant(cf => cf.ByControlType(ControlType.Button).And(cf.ByName("Previous")));
-            if (previousMonthButton != null)
-            {
-                previousMonthButton.Click();
-                Console.WriteLine("Clicked on 'Previous Month' button.");
-            }
-            else
-            {
-                Console.WriteLine("'Previous Month' button not found. Please check its Name/AutomationId.");
-            }
-
-            // Find Next Month button
-            var nextMonthButton = calendarControl.FindFirstDescendant(cf => cf.ByControlType(ControlType.Button).And(cf.ByName("Next")));
-            if (nextMonthButton != null)
-            {
-                nextMonthButton.Click();
-                Console.WriteLine("Clicked on 'Next Month' button.");
-            }
-            else
-            {
-                Console.WriteLine("'Next Month' button not found. Please check its Name/AutomationId.");
+                targetRowElement = row.GetParent(); // Get the parent row element
+                Console.WriteLine($"Found target row with identifier '{uniqueRowIdentifier}' at row index {i}.");
+                break; 
             }
         }
+
+        Assert.That(targetRowElement, Is.Not.Null, $"Could not find a row containing '{uniqueRowIdentifier}'. Ensure the item exists for deletion.");
+
+        // --- Step 2: Perform the deletion ---
+        // Click on the target row (you might need to click on a specific cell in the row
+        // or the row header, depending on your UI's context menu trigger)
+        // If clicking the row header works, good. Otherwise, you might need to find a cell within targetRowElement
+        // and right-click that. For simplicity, let's try to right-click the row itself if it's a DataGridViewRow.
+        // Assuming targetRowElement is a DataGridViewRow type or can be treated as such for clicking.
+
+        // If your DataGridView allows right-clicking on any cell in the row to bring up the context menu:
+        // You might need to get a specific cell from the targetRowElement for the right-click.
+        // For example, if you want to right-click the first cell of the identified row:
+        AutomationElement cellToRightClick = null;
+        if (targetRowElement.Current.ControlType == ControlType.DataItem || targetRowElement.Current.ControlType == ControlType.Custom) // DataGridViewRow is often DataItem or Custom
+        {
+            // Try to find a child element (cell) within the row.
+            // This might vary based on your UI framework.
+            var children = targetRowElement.FindAll(TreeScope.Children, new PropertyCondition(AutomationElement.IsContentElementProperty, true));
+            if (children.Count > 0)
+            {
+                cellToRightClick = children[0]; // Right-click the first cell of the row
+            }
+        }
+
+        Assert.That(cellToRightClick, Is.Not.Null, "Could not find a clickable element within the target row for right-click.");
+
+        cellToRightClick.RightClick();
+        Wait.UntilInputIsProcessed(); 
+        Console.WriteLine("Target row (or its cell) right-clicked.");
+
+        var deleteMenuItem = GetElement<MenuItem>(mainWindow, name: "Delete Row", controlType: ControlType.MenuItem);
+        Assert.That(deleteMenuItem, Is.Not.Null, "Delete menu item should be found.");
+        deleteMenuItem.Click();
+        Wait.UntilInputIsProcessed(); 
+        Console.WriteLine("Delete menu item clicked.");
+
+        var messageBoxLabel = GetElement<Label>(mainWindow, name: "Row deleted successfully!", controlType: ControlType.Text);
+        Assert.That(messageBoxLabel, Is.Not.Null, "Message box label should be found.");
+        Console.WriteLine("Message box label found.");
+
+        var okButton = GetElement<Button>(mainWindow, name: "OK", controlType: ControlType.Button);
+        Assert.That(okButton, Is.Not.Null, "OK button should be found.");
+        okButton.Click();
+        Wait.UntilInputIsProcessed(); 
+        Console.WriteLine("OK button clicked.");
+
+        // --- Step 3: Assert the row is no longer present ---
+        // Re-query the grid pattern to get updated row count and contents.
+        // It's crucial to get a fresh GridPattern or re-find the DataGrid element
+        // if the UI completely refreshes after deletion. Assuming the grid element
+        // remains valid, just get the new row count.
+        int newRowCount = gridPattern.RowCount;
+        Console.WriteLine($"New DataGrid reports {newRowCount} rows.");
+
+        Assert.That(newRowCount, Is.EqualTo(initialRowCount - 1), "Row count did not decrease by one after deletion.");
+
+        // Verify the unique row is no longer present
+        bool rowFoundAfterDeletion = false;
+        for (int i = 0; i < newRowCount; i++)
+        {
+            AutomationElement row = gridPattern.GetItem(i, 0); 
+            Assert.That(row, Is.Not.Null, $"Could not retrieve row {i} from DataGrid after deletion.");
+            string cellText = GetCellText(row);
+            if (cellText != null && cellText.Contains(uniqueRowIdentifier))
+            {
+                rowFoundAfterDeletion = true;
+                break;
+            }
+        }
+
+        Assert.That(rowFoundAfterDeletion, Is.False, $"The row with identifier '{uniqueRowIdentifier}' was unexpectedly found after deletion.");
+        Console.WriteLine($"Successfully confirmed that the row with '{uniqueRowIdentifier}' has been deleted.");
+    }
+
+    // Helper method to extract text from a cell AutomationElement
+    private string GetCellText(AutomationElement cellElement)
+    {
+        if (cellElement == null) return null;
+
+        // Try ValuePattern first (for editable fields)
+        if (cellElement.TryGetCurrentPattern(ValuePattern.Pattern, out object valuePatternObj))
+        {
+            return ((ValuePattern)valuePatternObj).Current.Value;
+        }
+        // Then TextPattern (for static text)
+        else if (cellElement.TryGetCurrentPattern(TextPattern.Pattern, out object textPatternObj))
+        {
+            return ((TextPattern)textPatternObj).DocumentRange.GetText(-1).Trim();
+        }
+        // Fallback to Name property
+        else if (!string.IsNullOrEmpty(cellElement.Current.Name))
+        {
+            return cellElement.Current.Name;
+        }
+        return null; // No identifiable text
+    }
+
+    // Placeholder for your existing GetElement method.
+    // Replace with your actual implementation.
+    private T GetElement<T>(AutomationElement parent, string name = null, string automationId = null, ControlType controlType = null) where T : class
+    {
+        // Your existing implementation to find elements
+        // This is a simplified example.
+        PropertyCondition nameCondition = name != null ? new PropertyCondition(AutomationElement.NameProperty, name) : null;
+        PropertyCondition automationIdCondition = automationId != null ? new PropertyCondition(AutomationElement.AutomationIdProperty, automationId) : null;
+        PropertyCondition controlTypeCondition = controlType != null ? new PropertyCondition(AutomationElement.ControlTypeProperty, controlType) : null;
+
+        Condition combinedCondition;
+        if (nameCondition != null && automationIdCondition != null && controlTypeCondition != null)
+        {
+            combinedCondition = new AndCondition(nameCondition, automationIdCondition, controlTypeCondition);
+        }
+        else if (nameCondition != null && automationIdCondition != null)
+        {
+            combinedCondition = new AndCondition(nameCondition, automationIdCondition);
+        }
+        else if (nameCondition != null && controlTypeCondition != null)
+        {
+            combinedCondition = new AndCondition(nameCondition, controlTypeCondition);
+        }
+        else if (automationIdCondition != null && controlTypeCondition != null)
+        {
+            combinedCondition = new AndCondition(automationIdCondition, controlTypeCondition);
+        }
+        else if (nameCondition != null)
+        {
+            combinedCondition = nameCondition;
+        }
+        else if (automationIdCondition != null)
+        {
+            combinedCondition = automationIdCondition;
+        }
+        else if (controlTypeCondition != null)
+        {
+            combinedCondition = controlTypeCondition;
+        }
+        else
+        {
+            throw new ArgumentException("At least one search criterion (name, automationId, or controlType) must be provided.");
+        }
+
+        return parent.FindFirst(TreeScope.Descendants, combinedCondition) as T;
+    }
+
+    // Placeholder for your existing Wait utility.
+    public static class Wait
+    {
+        public static void UntilInputIsProcessed()
+        {
+            // Simulate waiting for UI processing. In a real framework, this might involve
+            // Thread.Sleep, or more robust mechanisms like polling for UI inactivity.
+            System.Threading.Thread.Sleep(500); // Example, adjust as needed
+        }
+
+        public static bool UntilResponsive(AutomationElement element, TimeSpan timeout)
+        {
+            // Your existing implementation for checking responsiveness
+            // This is a simplified example.
+            System.Threading.Thread.Sleep(timeout); // Example, just waits for timeout
+            return true;
+        }
+    }
+
+    // Placeholder for your existing DataGridView class (if custom)
+    // If you are using System.Windows.Automation.AutomationElement directly,
+    // you might not need custom classes like DataGridView, TabItem, etc.
+    // These are typically wrappers around AutomationElement.
+    public class DataGridView : AutomationElement
+    {
+        public DataGridView(AutomationElement element) : base(element.Current.AutomationId, element.Current.Name) { } // Placeholder
+        public dynamic Patterns { get; } = new DataGridPatterns(); // Placeholder
+    }
+
+    public class DataGridPatterns
+    {
+        public GridPattern Grid { get; } = new GridPattern(null, null); // Placeholder. You'd initialize with the real pattern.
+    }
+
+    // Placeholder for DataGridViewRow
+    public class DataGridViewRow : AutomationElement
+    {
+        public DataGridViewRow(AutomationElement element) : base(element.Current.AutomationId, element.Current.Name) { } // Placeholder
+    }
+
+    // Placeholder for TabItem
+    public class TabItem : AutomationElement
+    {
+        public TabItem(AutomationElement element) : base(element.Current.AutomationId, element.Current.Name) { } // Placeholder
+        public void Select() { /* Your selection logic */ }
+    }
+
+    // Placeholder for MenuItem
+    public class MenuItem : AutomationElement
+    {
+        public MenuItem(AutomationElement element) : base(element.Current.AutomationId, element.Current.Name) { } // Placeholder
+        public void Click() { /* Your click logic */ }
+    }
+
+    // Placeholder for Label
+    public class Label : AutomationElement
+    {
+        public Label(AutomationElement element) : base(element.Current.AutomationId, element.Current.Name) { } // Placeholder
+    }
+
+    // Placeholder for Button
+    public class Button : AutomationElement
+    {
+        public Button(AutomationElement element) : base(element.Current.AutomationId, element.Current.Name) { } // Placeholder
+        public void Click() { /* Your click logic */ }
     }
 }

@@ -1523,7 +1523,8 @@ public sealed class Test2
     [Test]
     public void DragAndDrop()
     {
-        var TabPage3 = mainWindow.FindFirstDescendant(cf => cf.ByAutomationId("tabPage3")).AsTabItem();
+        // var TabPage3 = mainWindow.FindFirstDescendant(cf => cf.ByAutomationId("tabPage3")).AsTabItem();
+        var TabPage3 = GetElement<TabItem>(mainWindow, name: "tabPage3", controlType: ControlType.TabItem);
         Assert.That(TabPage3, Is.Not.Null, "TabPage3 should be found.");
         // Select the tab page
         TabPage3.Select();
@@ -1531,7 +1532,9 @@ public sealed class Test2
         Console.WriteLine("Switched to TabPage3.");
 
         // Find the DataGrid AutomationElement
-        var dataGridElement = mainWindow.FindFirstDescendant(cf => cf.ByAutomationId("dataGridView1").And(cf.ByControlType(ControlType.DataGrid)));
+        // var dataGridElement = mainWindow.FindFirstDescendant(cf => cf.ByAutomationId("dataGridView1").And(cf.ByControlType(ControlType.DataGrid)));
+        var dataGridElement = GetElement<DataGridView>(mainWindow, automationId: "dataGridView1");
+
         Assert.That(dataGridElement, Is.Not.Null, "DataGrid AutomationElement should be present.");
         Console.WriteLine($"DataGrid AutomationElement found: {dataGridElement.Name} (AutomationId: {dataGridElement.AutomationId})");
         Thread.Sleep(2000);
@@ -1569,14 +1572,6 @@ public sealed class Test2
         Console.WriteLine($"RichTextBox AutomationElement found: {richTextBox.Name} (AutomationId: {richTextBox.AutomationId})");
         Thread.Sleep(2000);
 
-        // --- Perform Drag and Drop using FlaUI's Mouse methods ---
-        // You need an Automation object (usually from Application.Attach or AutomationFactory.Get...")
-        // Assuming 'automation' is available, e.g., from `FlaUI.Core.AutomationFactory.Get </summary>()` or `app.Automation`.
-        // If you are using a FlaUI TestBase, 'Automation' might be directly accessible.
-        // Let's assume you have an 'automation' instance available. If not, you'd initialize it:
-        // var automation = new UIA3Automation(); // or UIA2Automation() depending on your application type
-
-        // 1. Get the bounding rectangle of the source cell and the target rich text box
 
         var nextCellElement = gridPattern.GetItem(4, 4);
         Assert.That(cellElement, Is.Not.Null, $"Cell at row {targetRowIndex}, column {targetColumnIndex} not found.");
@@ -1584,8 +1579,7 @@ public sealed class Test2
         var cellBounds = cellElement.BoundingRectangle;
         var cellNextBounds = nextCellElement.BoundingRectangle;
 
-        // 2. Calculate the start and end points for the drag
-        // You might want to drag from the center of the cell
+
         var startPoint = cellBounds.Center();
         // And drop to the center of the rich text box, or a specific point within it
         var endPoint = cellNextBounds.Center();
@@ -1593,19 +1587,19 @@ public sealed class Test2
         Console.WriteLine($"Starting drag from: {startPoint}");
         Console.WriteLine($"Dropping to: {endPoint}");
 
-        // 3. Perform the drag and drop
+
         // Move to start point and press mouse button down
         Mouse.MoveTo(startPoint);
         Mouse.Down(MouseButton.Left);
-        Thread.Sleep(200); // brief pause to simulate drag hold
+        Thread.Sleep(200);
 
         // Move to end point
         Mouse.MoveTo(endPoint);
-        Thread.Sleep(200); // simulate human-like drag
+        Thread.Sleep(200);
 
         // Release mouse button to drop
         Mouse.Up(MouseButton.Left);
-        Thread.Sleep(500); // allow UI to process drop
+        Thread.Sleep(500);
 
         Button messageBoxOkButton = GetElement<Button>(mainWindow, name: "OK", controlType: ControlType.Button);
         Assert.That(messageBoxOkButton, Is.Not.Null, "OK button should be found.");
@@ -1619,10 +1613,19 @@ public sealed class Test2
         if (richTextBox.Patterns.Value.IsSupported)
         {
             var rawText = richTextBox.Patterns.Value.Pattern.Value.Value;
-var trimmedText = rawText.Trim();
+            var trimmedText = rawText.Trim();
             Console.WriteLine($"RichTextBox content after drop: '{trimmedText}'");
             // Assert.That(richTextBoxValue, Contains.Substring(cellValue), "RichTextBox should contain the dropped cell value.");
-           Console.WriteLine($"expected content after drop: '{expectedCellValue}'");
+            Console.WriteLine($"expected content after drop: '{expectedCellValue}'");
+            Assert.That(trimmedText, Is.EqualTo(expectedCellValue), "RichTextBox should contain the dropped cell value.");
+        }
+        else
+        {
+            var rawText = richTextBox.Name;
+            var trimmedText = rawText.Trim();
+            Console.WriteLine($"RichTextBox content after drop: '{trimmedText}'");
+            // Assert.That(richTextBoxValue, Contains.Substring(cellValue), "RichTextBox should contain the dropped cell value.");
+            Console.WriteLine($"expected content after drop: '{expectedCellValue}'");
             Assert.That(trimmedText, Is.EqualTo(expectedCellValue), "RichTextBox should contain the dropped cell value.");
         }
     }
@@ -1814,7 +1817,7 @@ var trimmedText = rawText.Trim();
          
      }
     [Test]
-    public void DeleteRow()
+    public void ContextMenu_DeleteRow()
     {
         var TabPage3 = GetElement<TabItem>(mainWindow, name: "tabPage3", controlType: ControlType.TabItem);
         Assert.That(TabPage3, Is.Not.Null, "TabPage3 should be found.");
@@ -1837,17 +1840,44 @@ var trimmedText = rawText.Trim();
 
         int rowCount = gridPattern.RowCount;
         int colCount = gridPattern.ColumnCount;
-        var targetRowIndex = 4; // This is the 11th row (0-indexed, after the header row if present)
+        var targetUniqueName = "Name 8";
         Console.WriteLine($"DataGrid reports {rowCount} rows and {colCount} columns via GridPattern.");
-        Assert.That(targetRowIndex, Is.LessThan(rowCount), $"Target row index {targetRowIndex} is out of bounds. Max row index is {rowCount - 1}.");
-        var rowHeadrer = GetElement<DataGridViewRow>(dataGridElement, name: "Row 4", controlType: ControlType.Header);
-        Assert.That(rowHeadrer, Is.Not.Null, "RowHeader should be found.");
-        rowHeadrer.Click();
-        Wait.UntilInputIsProcessed(); // Give UI time to process click event
-        Console.WriteLine("RowHeader clicked.");
-        rowHeadrer.RightClick();
-        Wait.UntilInputIsProcessed(); // Give UI time to process click event
-        Console.WriteLine("RowHeader right-clicked.");
+
+        int columnIndexForIdentifier = 1; // Assuming the unique identifier is in the first column (0-indexed)
+
+        AutomationElement targetRowElement;//not able to use var because it is implicitly typed variable
+        int initialRowCount = gridPattern.RowCount;
+
+        // Iterate through rows to find the unique one
+        for (int i = 0; i < initialRowCount; i++)
+        {
+            AutomationElement row = gridPattern.GetItem(i, columnIndexForIdentifier); // Get the first cell of the row
+            Assert.That(row, Is.Not.Null, $"Could not retrieve row {i} from DataGrid.");
+
+            // Get the text from the cell (assuming it's a TextPattern or ValuePattern)
+            string cellText = row.Patterns.Value.Pattern.Value; // Helper method to extract text from a cell
+
+            if (cellText != null && cellText.Contains(targetUniqueName))
+            {
+
+                // targetRowElement = row.Parent; // Get the parent row element
+                Console.WriteLine($"Found target row with identifier '{targetUniqueName}' at row index {i}.");
+                //  var rowHeaderName = Row+(i);
+                var rowHeader = GetElement<AutomationElement>(dataGridElement, name: "Row "+ i, controlType: ControlType.Header);
+                Console.WriteLine($"Row ,{i}");
+                Assert.That(rowHeader, Is.Not.Null, "RowHeader should be found.");
+                Thread.Sleep(5000);
+                Console.WriteLine("RowHeader found.");
+                rowHeader.Click(); // Move the Click() call inside the if statement
+                Console.WriteLine("RowHeader right-clicked.");
+                rowHeader.RightClick(); // <--- AND HERE
+                Wait.UntilInputIsProcessed(); // Give UI time to process click event
+                
+                break;
+            }
+
+        }
+
         var deleteMenuItem = GetElement<MenuItem>(mainWindow, name: "Delete Row", controlType: ControlType.MenuItem);
         Assert.That(deleteMenuItem, Is.Not.Null, "Delete menu item should be found.");
         deleteMenuItem.Click();
@@ -1859,10 +1889,215 @@ var trimmedText = rawText.Trim();
         var okButton = GetElement<Button>(mainWindow, name: "OK", controlType: ControlType.Button);
         Assert.That(okButton, Is.Not.Null, "OK button should be found.");
         okButton.Click();
+        Thread.Sleep(8000);
         Wait.UntilInputIsProcessed(); // Give UI time to process click event
         Console.WriteLine("OK button clicked.");
+        Assert.That(gridPattern.RowCount, Is.EqualTo(initialRowCount - 1), "Row should be deleted.");
+        Console.WriteLine("Row deleted successfully.");
+        Assert.That(gridPattern.RowCount, Is.EqualTo(initialRowCount - 1), "Row should be deleted.");
+        Wait.UntilInputIsProcessed(); // Give UI time to process click event
+        int finalRowCount = gridPattern.RowCount;
+
+        // Iterate through rows to find the unique one
+        for (int i = 0; i < finalRowCount; i++)
+        {
+            AutomationElement row = gridPattern.GetItem(i, columnIndexForIdentifier); // Get the first cell of the row
+            Assert.That(row, Is.Not.Null, $"Could not retrieve row {i} from DataGrid.");
+
+            // Get the text from the cell (assuming it's a TextPattern or ValuePattern)
+            string cellText = row.Patterns.Value.Pattern.Value; // Helper method to extract text from a cell
+
+            if (cellText != null && cellText.Contains(targetUniqueName))
+            {
+                Console.WriteLine($"Found target row with identifier '{targetUniqueName}' at row index {i}.");
+                Assert.Fail("Row should be deleted.");
+            }
+            else
+            {
+                Console.WriteLine($"Did not find target row with identifier '{targetUniqueName}' .");
+                Console.WriteLine("Row deleted successfully.");
+            }
+        }
+
+        
+
 
     }
+     [Test]
+  public void ContextMenu_DeleteRow1()
+    {
+        var TabPage3 = GetElement<TabItem>(mainWindow, name: "tabPage3", controlType: ControlType.TabItem);
+        Assert.That(TabPage3, Is.Not.Null, "TabPage3 should be found.");
+        TabPage3.Select();
+        Wait.UntilInputIsProcessed(); // Give UI time to switch tabs
+        Console.WriteLine("Switched to TabPage3.");
+
+        // 1. Find the DataGrid AutomationElement and cast it to FlaUI's DataGrid
+        // Directly get the FlaUI.Core.AutomationElements.DataGrid type.
+        var dataGrid = GetElement<DataGridView>(mainWindow, automationId: "dataGridView1", controlType: ControlType.DataGrid);
+        Assert.That(dataGrid, Is.Not.Null, "DataGrid should be present.");
+        Console.WriteLine($"DataGrid found: {dataGrid.Name} (AutomationId: {dataGrid.AutomationId})");
+
+        // Wait for the DataGrid to be responsive, ensuring its contents are loaded.
+        Wait.UntilResponsive(dataGrid, TimeSpan.FromSeconds(10)); // Pass the DataGrid element directly
+        Console.WriteLine("DataGrid is responsive.");
+
+        var targetUniqueName = "Name 2";
+        AutomationElement targetRow = null;
+        int targetRowIndex = -1; // Store the index of the target row
+        // Get initial row count using FlaUI.Core.AutomationElements.DataGrid.Rows.Length
+        int initialRowCount = dataGrid.Rows.Length;
+        Console.WriteLine($"DataGrid reports {initialRowCount} rows initially.");
+
+        // Assuming the unique identifier is in the second column (index 1)
+        int columnIndexForIdentifier = 1;
+
+        // 2. Iterate through rows to find the unique one
+        // Iterate through the DataGridRow objects directly
+        for (int i = 0; i < dataGrid.Rows.Length; i++) // Use a for loop to get the index
+        {
+            var row = dataGrid.Rows[i];
+            // Ensure the row has enough cells before trying to access the specific column
+            if (row.Cells.Length > columnIndexForIdentifier)
+            {
+                var cell = row.Cells[columnIndexForIdentifier];
+                Assert.That(cell, Is.Not.Null, $"Could not retrieve cell at column {columnIndexForIdentifier} from a row.");
+
+                // Get the text from the cell using a more robust approach
+                string cellText;
+                if (cell.Patterns.Value.IsSupported)
+                {
+                    cellText = cell.Patterns.Value.Pattern.Value;
+                }
+                else if (cell.Patterns.Text.IsSupported)
+                {
+                    // For TextPattern, use DocumentRange.GetText()
+                    cellText = cell.Patterns.Text.Pattern.DocumentRange.GetText(int.MaxValue); // Get all text
+                }
+                else
+                {
+                    // Fallback to the Name property of the AutomationElement
+                    cellText = cell.Name;
+                }
+
+                if (cellText != null && cellText.Contains(targetUniqueName))
+                {
+                    targetRow = row;
+                    targetRowIndex = i; // Store the found index
+                    Console.WriteLine($"Found target row with identifier '{targetUniqueName}' at index {targetRowIndex}.");
+                    break; // Found the row, exit loop
+                }
+            }
+        }
+
+        Assert.That(targetRow, Is.Not.Null, $"Target row with identifier '{targetUniqueName}' not found in DataGrid. Cannot proceed with deletion.");
+
+        // 3. Select the target row. Try to click the row header first, then fallback to clicking the row itself.
+        // Construct the expected row header name based on the found index
+        string expectedRowHeaderName = $"Row {targetRowIndex}";
+        var rowHeader = targetRow.FindFirstChild(cf => cf.ByName(expectedRowHeaderName)); // Look for a Header control type within the row with the specific name
+        
+        if (rowHeader != null)
+        {
+            rowHeader.Click(); // Click the row header
+            Console.WriteLine($"Row header '{expectedRowHeaderName}' clicked to select the row.");
+        }
+        else
+        {
+            targetRow.Click(); // Fallback to clicking the row itself
+            Console.WriteLine("Target row clicked (selected). Specific row header not found or named differently.");
+        }
+        Wait.UntilInputIsProcessed(); // Give UI time to process the click event
+
+        targetRow.RightClick(); // Right-click to open the context menu
+        Wait.UntilInputIsProcessed(); // Give UI time to display the context menu
+        Console.WriteLine("Target row right-clicked.");
+
+        // 4. Find and click the "Delete Row" menu item
+        // Use Wait.Until for waiting until an element appears
+        var deleteMenuItem = GetElement<MenuItem>(mainWindow, name: "Delete Row", controlType: ControlType.MenuItem);
+        Assert.That(deleteMenuItem, Is.Not.Null, "Delete menu item should be found after right-click.");
+        deleteMenuItem.Click();
+        Wait.UntilInputIsProcessed(); // Give UI time to process the menu item click
+        Console.WriteLine("Delete menu item clicked.");
+
+        // 5. Handle the confirmation message box
+        // Use Wait.Until for waiting until an element appears
+        var messageBoxLabel = GetElement<Label>(mainWindow, name: "Row deleted successfully!", controlType: ControlType.Text) ;
+        Assert.That(messageBoxLabel, Is.Not.Null, "Message box label 'Row deleted successfully!' should be found.");
+        Console.WriteLine("Message box label found.");
+
+        var okButton = GetElement<Button>(mainWindow, name: "OK", controlType: ControlType.Button);
+        Assert.That(okButton, Is.Not.Null, "OK button should be found in the message box.");
+        okButton.Click();
+        Wait.UntilInputIsProcessed(); // Give UI time to process the OK button click
+        Console.WriteLine("OK button clicked.");
+
+        // IMPORTANT: Wait for the message box to disappear using Wait.Until
+        var messageBoxDisappeared = GetElement<Label>(mainWindow, name: "Row deleted successfully!", controlType: ControlType.Text);
+        Assert.That(messageBoxDisappeared, Is.True, "Message box did not disappear after deletion confirmation within the expected time.");
+        Console.WriteLine("Message box disappeared.");
+
+        // 6. Re-evaluate the DataGrid state after deletion
+        // It's CRUCIAL to re-get the DataGrid AutomationElement.
+        // The variable 'dataGrid' is already of type FlaUI.Core.AutomationElements.DataGrid.
+        // We need to re-fetch the *instance* of the DataGrid from the UI tree.
+        dataGrid = GetElement<DataGridView>(mainWindow, automationId: "dataGridView1", controlType: ControlType.DataGrid);
+        Assert.That(dataGrid, Is.Not.Null, "DataGrid should still be present after deletion.");
+
+        // Optionally, wait for the DataGrid to become responsive again after the UI update
+        Wait.UntilResponsive(dataGrid, TimeSpan.FromSeconds(5));
+        Console.WriteLine("DataGrid re-evaluated and responsive after deletion.");
+
+        int finalRowCount = dataGrid.Rows.Length;
+        Console.WriteLine($"DataGrid reports {finalRowCount} rows after deletion.");
+
+        // 7. Assert row count
+        Assert.That(finalRowCount, Is.EqualTo(initialRowCount - 1), "Row count should decrease by 1 after deletion.");
+        Console.WriteLine("Row count assertion passed: Row count decreased as expected.");
+
+        // 8. Verify the specific row is no longer present by iterating through the NEW rows
+        bool targetRowStillPresent = false;
+        foreach (var row in dataGrid.Rows)
+        {
+            // Ensure the row has enough cells
+            if (row.Cells.Length > columnIndexForIdentifier)
+            {
+                var cell = row.Cells[columnIndexForIdentifier];
+                // Use the same robust text extraction logic as before
+                string cellText;
+                if (cell.Patterns.Value.IsSupported)
+                {
+                    cellText = cell.Patterns.Value.Pattern.Value;
+                }
+                else if (cell.Patterns.Text.IsSupported)
+                {
+                    cellText = cell.Patterns.Text.Pattern.DocumentRange.GetText(int.MaxValue);
+                }
+                else
+                {
+                    cellText = cell.Name;
+                }
+
+                if (cellText != null && cellText.Contains(targetUniqueName))
+                {
+                    targetRowStillPresent = true;
+                    break; // Found the row, set flag and exit
+                }
+            }
+        }
+
+        Assert.That(targetRowStillPresent, Is.False, $"Verification Failed: Row with identifier '{targetUniqueName}' should have been deleted but was still found in the DataGrid.");
+        Console.WriteLine($"Verification Passed: Row with identifier '{targetUniqueName}' is no longer present in the DataGrid.");
+    }
+
+
+
+
+
+
+
+
     [Test]
     public void SearchInDataGrid()
     {
@@ -2058,6 +2293,14 @@ var trimmedText = rawText.Trim();
         var treeItemAravind = treeItemMI2.FindFirstDescendant(cf => cf.ByName("Aravind").And(cf.ByControlType(ControlType.TreeItem))).AsTreeItem();
         Assert.That(treeItemAravind, Is.Not.Null, "TreeItem 'Aravind' should be found as a descendant of 'MI2'.");
         Console.WriteLine($"TreeItem 'Aravind' found within 'MI2' hierarchy.");
+        treeItemAravind.Expand();
+         var treeItemEmployee1 = treeItemAravind.FindFirstDescendant(cf => cf.ByName("employee").And(cf.ByControlType(ControlType.TreeItem))).AsTreeItem();
+        Assert.That(treeItemEmployee1, Is.Null, "TreeItem 'employee' should be found as a descendant of 'MI2'.");
+        Console.WriteLine($"TreeItem 'employee' not found within 'Aravind' hierarchy.");
+        var treeItemCustomer1 = treeItemAravind.FindFirstDescendant(cf => cf.ByName("customer").And(cf.ByControlType(ControlType.TreeItem))).AsTreeItem();
+        Assert.That(treeItemCustomer1, Is.Null, "TreeItem 'customer' should be found as a descendant of 'MI2'.");
+        Console.WriteLine($"TreeItem 'customer' not found within 'Aravind' hierarchy.");
+       
 
         // Assert that 'Shailaja' is a descendant of 'MI2'
         var treeItemShailaja = treeItemMI2.FindFirstDescendant(cf => cf.ByName("Shailaja").And(cf.ByControlType(ControlType.TreeItem))).AsTreeItem();
@@ -2065,8 +2308,6 @@ var trimmedText = rawText.Trim();
         Console.WriteLine($"TreeItem 'Shailaja' found within 'MI2' hierarchy.");
         treeItemShailaja.Expand();
 
-
-        // Assert that 'Vijay' is a descendant of 'MI2'
         var treeItemEmployee = treeItemShailaja.FindFirstDescendant(cf => cf.ByName("employee").And(cf.ByControlType(ControlType.TreeItem))).AsTreeItem();
         Assert.That(treeItemEmployee, Is.Not.Null, "TreeItem 'employee' should be found as a descendant of 'MI2'.");
         Console.WriteLine($"TreeItem 'employee' found within 'Shailaja' hierarchy.");
@@ -2074,6 +2315,58 @@ var trimmedText = rawText.Trim();
         Assert.That(treeItemCustomer, Is.Not.Null, "TreeItem 'customer' should be found as a descendant of 'MI2'.");
         Console.WriteLine($"TreeItem 'customer' found within 'Shailaja' hierarchy.");
        
+    }
+    [Test]
+    public void TreeViewDragAndDrop()
+    {
+        var treeItemMI2 = GetElement<TreeItem>(mainWindow, name: "MI2", controlType: ControlType.TreeItem);
+        Assert.That(treeItemMI2, Is.Not.Null, "TreeItem 'MI2' should be found.");
+        Console.WriteLine($"TreeItem found: {treeItemMI2.Name}");
+        treeItemMI2.Expand();
+
+        ITogglePattern togglePattern;
+        togglePattern = treeItemMI2.Patterns.Toggle.Pattern;
+        // Assert that 'Shailaja' is a descendant of 'MI2'
+        var treeItemShailaja = GetElement<TreeItem>(treeItemMI2, name: "Shailaja", controlType: ControlType.TreeItem);
+        Assert.That(treeItemShailaja, Is.Not.Null, "TreeItem 'Shailaja' should be found as a descendant of 'MI2'.");
+        Console.WriteLine($"TreeItem 'Shailaja' found within 'MI2' hierarchy.");
+        treeItemShailaja.Expand();
+        var treeItemEmployee = GetElement<TreeItem>(treeItemShailaja, name: "employee", controlType: ControlType.TreeItem);
+        Assert.That(treeItemEmployee, Is.Not.Null, "TreeItem 'employee' should be found as a descendant of 'MI2'.");
+        Console.WriteLine($"TreeItem 'employee' found within 'Shailaja' hierarchy.");
+
+        var startPoint = treeItemEmployee.BoundingRectangle.Center();
+        var treeItemAravind = GetElement<TreeItem>(treeItemMI2, name: "Aravind", controlType: ControlType.TreeItem);
+        Assert.That(treeItemAravind, Is.Not.Null, "TreeItem 'Aravind' should be found as a descendant of 'MI2'.");
+        Console.WriteLine($"TreeItem 'Aravind' found within 'MI2' hierarchy.");
+
+        // And drop to the center of the rich text box, or a specific point within it
+        var endPoint = treeItemAravind.BoundingRectangle.Center();
+
+        Console.WriteLine($"Starting drag from: {startPoint}");
+        Console.WriteLine($"Dropping to: {endPoint}");
+
+
+        // Move to start point and press mouse button down
+        Mouse.MoveTo(startPoint);
+        Mouse.Down(MouseButton.Left);
+        Thread.Sleep(200);
+
+        // Move to end point
+        Mouse.MoveTo(endPoint);
+        Thread.Sleep(200);
+
+        // Release mouse button to drop
+        Mouse.Up(MouseButton.Left);
+        Thread.Sleep(500);
+        var employeeAfterDrag = GetElement<TreeItem>(treeItemAravind, name: "employee", controlType: ControlType.TreeItem);
+        Assert.That(employeeAfterDrag, Is.Not.Null, "TreeItem 'employee' should be found as a descendant of 'MI2'.");
+        Console.WriteLine($"TreeItem 'employee' found within 'Aravind' hierarchy.");
+        var employeeAfterDrag2 = GetElement<TreeItem>(treeItemShailaja, name: "employee", controlType: ControlType.TreeItem); 
+        Assert.That(employeeAfterDrag2, Is.Null, "TreeItem 'employee' should be found as a descendant of 'MI2'.");
+        Console.WriteLine($"TreeItem 'employee' not found within 'Shailaja' hierarchy.");   
+        
+      
     }
     [Test]
     public void DatePickerTest1()
